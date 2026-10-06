@@ -1,4 +1,5 @@
 import type { ThreadMoveDestination } from "../threads/threadOrder";
+import type { OrchestrationThreadExportFormat } from "@t3tools/contracts";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { canSnooze, effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
 import * as Cause from "effect/Cause";
@@ -8,10 +9,12 @@ import { Alert, Platform } from "react-native";
 
 import { withThreadDismissal } from "./thread-dismissal";
 import { showConfirmDialog, showTextInputDialog } from "../../components/ConfirmDialogHost";
+import { shareTextAsFile } from "../../lib/attachmentDownload";
 import { scopedThreadKey } from "../../lib/scopedEntities";
 import { refreshArchivedThreadsForEnvironment } from "../archive/useArchivedThreadSnapshots";
 import { pinOrderKeyBetween } from "@t3tools/client-runtime/state/thread-sort";
 import { appAtomRegistry } from "../../state/atom-registry";
+import { orchestrationEnvironment } from "../../state/orchestration";
 import { environmentServerConfigsAtom } from "../../state/server";
 import { environmentThreadShells, threadEnvironment } from "../../state/threads";
 import { queuedThreadKeysAtom } from "../../state/use-thread-outbox";
@@ -26,6 +29,7 @@ import {
   createThreadMovePlanner,
   threadDropLifecycle,
 } from "../threads/threadOrder";
+import { useHtmlRenderTheme } from "../threads/HtmlRenderWebView";
 import { getThreadListV2OrderedSection } from "../threads/threadListV2";
 import { threadCanArchive } from "./threadArchive";
 import { resolveThreadTitleRename } from "../threads/thread-title-rename";
@@ -75,6 +79,13 @@ function environmentSupportsTitleRegeneration(
   return (
     appAtomRegistry.get(environmentServerConfigsAtom).get(environmentId)?.environment.capabilities
       .threadTitleRegeneration === true
+  );
+}
+
+function environmentSupportsThreadExport(environmentId: EnvironmentThreadShell["environmentId"]) {
+  return (
+    appAtomRegistry.get(environmentServerConfigsAtom).get(environmentId)?.environment.capabilities
+      .threadExport === true
   );
 }
 
@@ -254,6 +265,11 @@ export function useThreadListActions(): {
   ) => Promise<boolean>;
   readonly renameThread: (thread: EnvironmentThreadShell) => void;
   readonly regenerateThreadTitle: (thread: EnvironmentThreadShell) => Promise<boolean>;
+  /** Exports the conversation and opens the share sheet with the file. */
+  readonly shareThread: (
+    thread: EnvironmentThreadShell,
+    format: OrchestrationThreadExportFormat,
+  ) => Promise<boolean>;
 } {
   const executeAction = useThreadActionExecutor();
   const snoozeMutation = useAtomCommand(threadEnvironment.snooze, { reportFailure: false });
@@ -266,8 +282,13 @@ export function useThreadListActions(): {
   const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {
     reportFailure: false,
   });
+  const exportThread = useAtomCommand(orchestrationEnvironment.exportThread, {
+    reportFailure: false,
+  });
+  const htmlRenderTheme = useHtmlRenderTheme();
   const snoozeInFlightThreadKeys = useRef(new Set<string>());
   const titleRegenerationInFlightThreadKeys = useRef(new Set<string>());
+  const shareInFlightThreadKeys = useRef(new Set<string>());
 
   const archiveThread = useCallback(
     (thread: EnvironmentThreadShell) => {
@@ -729,6 +750,60 @@ export function useThreadListActions(): {
     ],
   );
 
+  const shareThread = useCallback(
+    async (thread: EnvironmentThreadShell, format: OrchestrationThreadExportFormat) => {
+      const key = scopedThreadKey(thread.environmentId, thread.id);
+      if (shareInFlightThreadKeys.current.has(key)) {
+        return false;
+      }
+      if (!environmentSupportsThreadExport(thread.environmentId)) {
+        Alert.alert(
+          "Could not share thread",
+          "This environment's server does not support thread export yet. Update the server to share threads.",
+        );
+        return false;
+      }
+
+      shareInFlightThreadKeys.current.add(key);
+      selectionHaptic();
+      try {
+        const result = await exportThread({
+          environmentId: thread.environmentId,
+          input: {
+            threadId: thread.id,
+            format,
+            ...(format === "html" ? { theme: htmlRenderTheme } : {}),
+          },
+        });
+        if (result._tag === "Failure") {
+          const error = Cause.squash(result.cause);
+          Alert.alert(
+            "Could not share thread",
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : "The thread could not be exported.",
+          );
+          return false;
+        }
+        await shareTextAsFile({
+          text: result.value.content,
+          attachment: { name: result.value.fileName, mimeType: result.value.mimeType },
+          signal: new AbortController().signal,
+        });
+        return true;
+      } catch (error) {
+        Alert.alert(
+          "Could not share thread",
+          error instanceof Error ? error.message : "The share sheet could not be opened.",
+        );
+        return false;
+      } finally {
+        shareInFlightThreadKeys.current.delete(key);
+      }
+    },
+    [exportThread, htmlRenderTheme],
+  );
+
   const confirmDeleteThread = useConfirmDeleteThread(executeAction);
 
   return {
@@ -744,6 +819,7 @@ export function useThreadListActions(): {
     moveThread,
     renameThread,
     regenerateThreadTitle,
+    shareThread,
   };
 }
 

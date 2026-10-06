@@ -274,3 +274,27 @@ export async function shareLocalAttachment(input: {
     cached.preview.dispose();
   }
 }
+
+/** Writes generated text, such as a thread export, to a cache file for the share sheet. */
+export async function shareTextAsFile(input: {
+  readonly text: string;
+  readonly attachment: AttachmentFileMetadata;
+  readonly signal: AbortSignal;
+}): Promise<void> {
+  if ((await availableSharing(input.signal)) === null) return;
+  const cached = await createCachedAttachmentFile(input.attachment);
+  try {
+    if (input.signal.aborted) return;
+    try {
+      cached.file.create({ overwrite: true });
+      await cached.file.write(input.text);
+    } catch (cause) {
+      throw new Error("Could not prepare the file for sharing.", { cause });
+    }
+    if (!input.signal.aborted) {
+      await cached.preview.share(input.signal);
+    }
+  } finally {
+    cached.preview.dispose();
+  }
+}

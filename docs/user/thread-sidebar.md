@@ -182,6 +182,26 @@ and copying a thread reference. A copied reference uses the thread's pull reques
 link when available, otherwise its thread ID. See [keybindings](./keybindings.md)
 for custom configuration.
 
+## Export and share a thread
+
+On web and desktop, choose **Export thread…** from a thread's menu or the
+command palette. **Markdown** suits a pull request, an issue, or your notes.
+**Web page** saves one file that opens in any browser, in your current theme,
+with visual replies still interactive. **Conversation** keeps messages, plans,
+and visual replies; **Everything** adds commands, their output, diffs, and the
+agent's thinking. **Copy as Markdown** puts the export on your clipboard
+instead of saving a file. Bind **Thread: Export** in **Settings → Keybindings**
+to open it from the keyboard.
+
+On mobile, long-press a thread and choose **Share thread** to send the
+conversation as Markdown or a web page through the share sheet.
+
+Exports leave out your project's folder path, but command output, diffs, and
+messages can still contain file contents, paths, or secrets. Read the file
+before you share it. Very long output, diffs, and large images are shortened so
+the file stays easy to send. An export is for reading; it can't be imported
+back into T3 Code. Older servers don't offer export until they are updated.
+
 ## Inspect agent work
 
 **Limited** means the provider stopped on a usage or rate limit. The conversation

@@ -55,6 +55,11 @@ export function createOrchestrationEnvironmentAtoms<R, E>(
       label: "environment-data:orchestration:full-thread-diff",
       tag: ORCHESTRATION_V2_WS_METHODS.getFullThreadDiff,
     }),
+    // A one-off file the user asked for, so it's a command rather than a cached query.
+    exportThread: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:orchestration:export-thread",
+      tag: ORCHESTRATION_V2_WS_METHODS.exportThread,
+    }),
     threadSearch: createEnvironmentRpcQueryAtomFamily(runtime, {
       label: "environment-data:orchestration:thread-search",
       tag: ORCHESTRATION_V2_WS_METHODS.searchThreads,

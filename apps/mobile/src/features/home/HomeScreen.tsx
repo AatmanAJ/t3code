@@ -10,7 +10,11 @@ import {
   threadSearchMatchKey,
   type EnvironmentThreadSearchMatch,
 } from "@t3tools/client-runtime/state/thread-search";
-import { type EnvironmentId, type SidebarProjectGroupingMode } from "@t3tools/contracts";
+import {
+  type EnvironmentId,
+  type OrchestrationThreadExportFormat,
+  type SidebarProjectGroupingMode,
+} from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -113,6 +117,10 @@ interface HomeScreenProps {
   ) => Promise<boolean>;
   readonly onRenameThread: (thread: EnvironmentThreadShell) => void;
   readonly onRegenerateThreadTitle: (thread: EnvironmentThreadShell) => Promise<boolean>;
+  readonly onShareThread: (
+    thread: EnvironmentThreadShell,
+    format: OrchestrationThreadExportFormat,
+  ) => Promise<boolean>;
   readonly onSelectPendingTask: (pendingTask: PendingNewTask) => void;
   readonly onDeletePendingTask: (pendingTask: PendingNewTask) => void;
   readonly onNewThreadOnBranch: (thread: EnvironmentThreadShell) => void;
@@ -447,6 +455,12 @@ export function HomeScreen(props: HomeScreenProps) {
     (thread: EnvironmentThreadShell) => props.onRenameThread(thread),
     [props.onRenameThread],
   );
+  const handleShareThread = useCallback(
+    (thread: EnvironmentThreadShell, format: OrchestrationThreadExportFormat) => {
+      void props.onShareThread(thread, format);
+    },
+    [props.onShareThread],
+  );
   const handleDeleteThread = props.onDeleteThread;
   const handleUnsettleThread = props.onUnsettleThread;
   // The settled tail renders in pages; expansion resets when the filter
@@ -501,6 +515,7 @@ export function HomeScreen(props: HomeScreenProps) {
     pinReorderEnvironmentIds,
     activeReorderEnvironmentIds,
     titleRegenerationEnvironmentIds,
+    exportEnvironmentIds,
   } = listEnvironments;
   const resolveProviderInstance = useThreadRowProviderInstanceResolver(providersByEnvironmentId);
   const pendingOrder = usePendingThreadOrder(nowMinute, snoozeWakeTick);
@@ -752,6 +767,8 @@ export function HomeScreen(props: HomeScreenProps) {
           onRenameThread={handleRenameThread}
           onRegenerateThreadTitle={handleRegenerateThreadTitle}
           titleRegenerationSupported={titleRegenerationEnvironmentIds.has(thread.environmentId)}
+          exportSupported={exportEnvironmentIds.has(thread.environmentId)}
+          onShareThread={handleShareThread}
           settlementSupported={settlementEnvironmentIds.has(thread.environmentId)}
           onSettleThread={handleSettleThread}
           snoozeSupported={snoozeEnvironmentIds.has(thread.environmentId)}
@@ -785,6 +802,8 @@ export function HomeScreen(props: HomeScreenProps) {
       handleRegenerateThreadTitle,
       handleRenameThread,
       handleSettleThread,
+      handleShareThread,
+      exportEnvironmentIds,
       handleSnoozeThread,
       handleUnpinThread,
       handleUnsnoozeThread,

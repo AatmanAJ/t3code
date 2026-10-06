@@ -171,6 +171,7 @@ import { cn } from "~/lib/utils";
 import { EnvironmentMachineIcon } from "./EnvironmentMachineIcon";
 import { ProjectEnvironmentBadge } from "./ProjectEnvironmentBadge";
 import { buildDraftActionMenuItems, buildThreadActionMenuItems } from "./threadActionMenu.logic";
+import { openThreadExportDialog } from "./ThreadExportDialog";
 import {
   animateSidebarLayoutChanges,
   applySidebarThreadDrop,
@@ -4452,6 +4453,8 @@ export default function Sidebar() {
         const supportsTitleRegeneration =
           serverConfigs.get(thread.environmentId)?.environment.capabilities
             .threadTitleRegeneration === true;
+        const supportsThreadExport =
+          serverConfigs.get(thread.environmentId)?.environment.capabilities.threadExport === true;
         const isRegeneratingTitle = thread.titleRegeneration != null;
         const isSettled = settledThreadKeysRef.current.has(threadKey);
         const isSnoozed = snoozedThreadKeysRef.current.has(threadKey);
@@ -4489,6 +4492,7 @@ export default function Sidebar() {
                 snooze: supportsSnooze,
                 pinning: supportsPinning,
                 titleRegeneration: supportsTitleRegeneration,
+                threadExport: supportsThreadExport,
               },
               snoozePresets,
             }),
@@ -4619,6 +4623,9 @@ export default function Sidebar() {
             return;
           case "copy-thread-id":
             copyThreadIdToClipboard(thread.id, { threadId: thread.id });
+            return;
+          case "export":
+            openThreadExportDialog(threadRef);
             return;
           case "archive": {
             if (confirmThreadArchive) {

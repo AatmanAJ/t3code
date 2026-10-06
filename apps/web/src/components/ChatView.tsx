@@ -569,6 +569,7 @@ import {
 } from "./ui/alert-dialog";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { ServerUpdateAction } from "./ServerUpdateAction";
+import { openThreadExportDialog } from "./ThreadExportDialog";
 import { useAutoBalanceUpdateBanner } from "./chat/useAutoBalanceUpdateBanner";
 import {
   ComposerServerUpdateIcon,
@@ -6924,6 +6925,7 @@ export default function ChatView(props: ChatViewProps) {
   const supportsSettlement = serverConfig?.environment.capabilities.threadSettlement === true;
   const supportsSnooze = serverConfig?.environment.capabilities.threadSnooze === true;
   const supportsPinning = serverConfig?.environment.capabilities.threadPinning === true;
+  const supportsThreadExport = serverConfig?.environment.capabilities.threadExport === true;
   const activeThreadPinned = supportsPinning && activeThreadShell?.pinnedAt != null;
   const activeThreadSnoozed =
     activeThreadShell !== null &&
@@ -7864,6 +7866,14 @@ export default function ChatView(props: ChatViewProps) {
         return;
       }
 
+      if (command === "thread.export") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isServerThread || !activeThreadRef || !supportsThreadExport) return;
+        openThreadExportDialog(activeThreadRef);
+        return;
+      }
+
       if (command === "terminal.toggle") {
         event.preventDefault();
         event.stopPropagation();
@@ -8072,6 +8082,7 @@ export default function ChatView(props: ChatViewProps) {
     settleThread,
     supportsPinning,
     supportsSettlement,
+    supportsThreadExport,
     confirmAndUnpinThread,
     copyActiveThreadReference,
     getShortcutContext,
