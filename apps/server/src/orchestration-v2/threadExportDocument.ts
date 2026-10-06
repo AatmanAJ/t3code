@@ -144,10 +144,14 @@ function fileChangeDiff(item: Extract<OrchestrationV2TurnItem, { type: "file_cha
 }
 
 interface WorkGroup {
+  readonly runId: RunId | null;
   readonly steps: Array<ThreadExportStep>;
   stepCount: number;
-  firstStartedAt: Date | null;
-  lastCompletedAt: Date | null;
+}
+
+interface Span {
+  start: Date;
+  end: Date;
 }
 
 export interface BuildThreadExportDocumentInput {
@@ -185,6 +189,22 @@ export function buildThreadExportDocument(
       : `${provider} · ${run.modelSelection.model}`;
   };
 
+  // A turn's span runs from its first item to its last, like the app's "Worked for" row.
+  const turnSpans = new Map<RunId, Span>();
+  for (const { item } of projection.visibleTurnItems) {
+    if (item.runId === null) continue;
+    const start = toDate(item.startedAt) ?? DateTime.toDateUtc(item.updatedAt);
+    const end = toDate(item.completedAt) ?? DateTime.toDateUtc(item.updatedAt);
+    const span = turnSpans.get(item.runId);
+    if (span === undefined) {
+      turnSpans.set(item.runId, { start, end });
+    } else {
+      if (start < span.start) span.start = start;
+      if (end > span.end) span.end = end;
+    }
+  }
+  const timedRuns = new Set<RunId>();
+
   const entries: Array<ThreadExportEntry> = [];
   let work: WorkGroup | null = null;
   const flushWork = () => {
@@ -192,10 +212,12 @@ export function buildThreadExportDocument(
       work = null;
       return;
     }
+    // One duration per turn, on its first group of work.
+    const runId = work.runId;
+    const span = runId === null || timedRuns.has(runId) ? undefined : turnSpans.get(runId);
     const durationMs =
-      work.firstStartedAt !== null && work.lastCompletedAt !== null
-        ? Math.max(0, work.lastCompletedAt.getTime() - work.firstStartedAt.getTime())
-        : null;
+      span === undefined ? null : Math.max(0, span.end.getTime() - span.start.getTime());
+    if (runId !== null) timedRuns.add(runId);
     entries.push({
       kind: "work",
       durationMs,
@@ -206,15 +228,7 @@ export function buildThreadExportDocument(
   };
   /** `step` runs only for full exports, so a conversation export never clips detail it drops. */
   const addStep = (item: OrchestrationV2TurnItem, step: () => ThreadExportStep) => {
-    work ??= { steps: [], stepCount: 0, firstStartedAt: null, lastCompletedAt: null };
-    const startedAt = toDate(item.startedAt);
-    const completedAt = toDate(item.completedAt) ?? DateTime.toDateUtc(item.updatedAt);
-    if (startedAt !== null && (work.firstStartedAt === null || startedAt < work.firstStartedAt)) {
-      work.firstStartedAt = startedAt;
-    }
-    if (work.lastCompletedAt === null || completedAt > work.lastCompletedAt) {
-      work.lastCompletedAt = completedAt;
-    }
+    work ??= { runId: item.runId, steps: [], stepCount: 0 };
     work.stepCount += 1;
     if (full) work.steps.push(step());
   };

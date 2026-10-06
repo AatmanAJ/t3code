@@ -269,6 +269,57 @@ describe("ThreadExport", () => {
     expect(result.truncated).toBe(true);
   });
 
+  it("times each turn from its first item to its last, once", async () => {
+    const asked = DateTime.makeUnsafe("2026-10-06T10:00:00.000Z");
+    const stepStart = DateTime.makeUnsafe("2026-10-06T10:00:20.000Z");
+    const stepEnd = DateTime.makeUnsafe("2026-10-06T10:00:30.000Z");
+    const answered = DateTime.makeUnsafe("2026-10-06T10:03:00.000Z");
+    const result = await runExport(
+      projection([
+        item({
+          type: "user_message",
+          createdBy: "user",
+          creationSource: "web",
+          messageId: "message-timed",
+          inputIntent: "message",
+          text: "Time this.",
+          attachments: [],
+          startedAt: asked,
+          completedAt: asked,
+        }),
+        item({
+          type: "command_execution",
+          input: "ls",
+          startedAt: stepStart,
+          completedAt: stepEnd,
+        }),
+        item({
+          type: "assistant_message",
+          messageId: "message-progress",
+          text: "Halfway.",
+          streaming: false,
+          startedAt: stepEnd,
+          completedAt: stepEnd,
+        }),
+        item({ type: "command_execution", input: "pwd", startedAt: stepEnd, completedAt: stepEnd }),
+        item({
+          type: "assistant_message",
+          messageId: "message-done",
+          text: "Done.",
+          streaming: false,
+          startedAt: answered,
+          completedAt: answered,
+        }),
+      ]),
+      { format: "markdown" },
+    );
+
+    // The whole turn, as the thread view shows it, not just the tool calls.
+    expect(result.content).toContain("_Worked for 3m · 1 step_");
+    expect(result.content.match(/Worked for/g)).toHaveLength(1);
+    expect(result.content).toContain("_1 step_");
+  });
+
   it("marks where a fork's own conversation starts", async () => {
     const result = await runExport(projection(conversation, { inheritedCount: 1 }), {
       format: "markdown",
