@@ -1,0 +1,2050 @@
+diff --git a/apps/mobile/src/features/settings/SettingsThreadsRouteScreen.tsx b/apps/mobile/src/features/settings/SettingsThreadsRouteScreen.tsx
+index c7883989ddb1..0b3c7b5d2b48 100644
+--- a/apps/mobile/src/features/settings/SettingsThreadsRouteScreen.tsx
++++ b/apps/mobile/src/features/settings/SettingsThreadsRouteScreen.tsx
+@@ -179,14 +179,14 @@ function AutoSettleSettingsRows() {
+         <SettingsSection title="Usage limits">
+           <SettingsSwitchRow
+             icon="clock"
+-            label="Auto-resume limited threads"
++            label="Resume after usage limits"
+             value={uniformMobileSetting(displayTargets, "autoResumeLimitedThreads")}
+             disabled={disabled}
+             onValueChange={(value) => writeToAll({ autoResumeLimitedThreads: value })}
+           />
+           <SettingsSwitchRow
+             icon="clock"
+-            label="Snooze limited threads"
++            label="Snooze until limits reset"
+             value={uniformMobileSetting(displayTargets, "snoozeLimitedThreads")}
+             disabled={disabled}
+             onValueChange={(value) => writeToAll({ snoozeLimitedThreads: value })}
+diff --git a/apps/web/index.html b/apps/web/index.html
+index c6941cd03978..6c01298b624d 100644
+--- a/apps/web/index.html
++++ b/apps/web/index.html
+@@ -398,7 +398,8 @@
+       body {
+         background: #ffffff;
+         color: #262626;
+-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
++        font-family:
++          -apple-system, BlinkMacSystemFont, "Inter Variable", "Segoe UI", system-ui, sans-serif;
+       }
+ 
+       html.dark body {
+diff --git a/apps/web/package.json b/apps/web/package.json
+index 2ad03efe77e1..74516847d57a 100644
+--- a/apps/web/package.json
++++ b/apps/web/package.json
+@@ -22,6 +22,7 @@
+     "@dnd-kit/sortable": "^10.0.0",
+     "@dnd-kit/utilities": "^3.2.2",
+     "@effect/atom-react": "catalog:",
++    "@fontsource-variable/inter": "^5.3.0",
+     "@formkit/auto-animate": "^0.9.0",
+     "@legendapp/list": "catalog:",
+     "@noble/hashes": "catalog:",
+diff --git a/apps/web/src/appearanceFonts.ts b/apps/web/src/appearanceFonts.ts
+index 6d94ed565c70..48f8e5955e7e 100644
+--- a/apps/web/src/appearanceFonts.ts
++++ b/apps/web/src/appearanceFonts.ts
+@@ -11,7 +11,7 @@ import {
+ } from "@t3tools/contracts";
+ 
+ export const DEFAULT_SANS_FONT_STACK =
+-  '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
++  '-apple-system, BlinkMacSystemFont, "Inter Variable", "Segoe UI", system-ui, sans-serif';
+ 
+ // Some engines map `ui-monospace` to a proportional font, so prefer concrete names.
+ export const DEFAULT_CODE_FONT_STACK =
+diff --git a/apps/web/src/components/BranchToolbar.tsx b/apps/web/src/components/BranchToolbar.tsx
+index bfc8d0dd6450..f69bd2071a56 100644
+--- a/apps/web/src/components/BranchToolbar.tsx
++++ b/apps/web/src/components/BranchToolbar.tsx
+@@ -225,11 +225,7 @@ const RunContextSelector = memo(function RunContextSelector({
+     <Tooltip>
+       <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
+         <WorkspaceIcon
+-          className={
+-            isPanel
+-              ? THREAD_DETAILS_PANEL_ICON_CLASS
+-              : cn("size-3 shrink-0", showEnvironmentIndicator && "mx-0!")
+-          }
++          className={isPanel ? THREAD_DETAILS_PANEL_ICON_CLASS : "size-3 shrink-0 mx-0!"}
+         />
+       </TooltipTrigger>
+       <TooltipPopup>
+@@ -241,29 +237,39 @@ const RunContextSelector = memo(function RunContextSelector({
+       </TooltipPopup>
+     </Tooltip>
+   );
+-  const icon = showEnvironmentIndicator ? (
++  const environmentIcon = (
++    <Tooltip>
++      <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
++        {autoEnvironmentLabel ? (
++          <ScaleIcon
++            className={isPanel ? THREAD_DETAILS_PANEL_ICON_CLASS : "size-3 shrink-0 mx-0!"}
++            aria-hidden="true"
++          />
++        ) : (
++          <EnvironmentMachineIcon
++            kind={activeEnvironment?.machine ?? "server"}
++            // Wide machine glyphs need a little more box to match the square row icons.
++            className={
++              isPanel
++                ? cn(THREAD_DETAILS_PANEL_ICON_CLASS, "-mx-px size-4.5")
++                : "size-3 shrink-0 mx-0!"
++            }
++          />
++        )}
++      </TooltipTrigger>
++      <TooltipPopup>{autoEnvironmentLabel ?? activeEnvironment?.label ?? "Run on"}</TooltipPopup>
++    </Tooltip>
++  );
++  const icon = !showEnvironmentIndicator ? (
++    workspaceIcon
++  ) : isPanel ? (
++    environmentIcon
++  ) : (
+     // Button's SVG margins consume 4px of the gap; mx-0! restores the intended 2px.
+     <span className="inline-flex shrink-0 items-center gap-0.5">
+-      <Tooltip>
+-        <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
+-          {autoEnvironmentLabel ? (
+-            <ScaleIcon
+-              className={isPanel ? THREAD_DETAILS_PANEL_ICON_CLASS : "size-3 shrink-0 mx-0!"}
+-              aria-hidden="true"
+-            />
+-          ) : (
+-            <EnvironmentMachineIcon
+-              kind={activeEnvironment?.machine ?? "server"}
+-              className={isPanel ? THREAD_DETAILS_PANEL_ICON_CLASS : "size-3 shrink-0 mx-0!"}
+-            />
+-          )}
+-        </TooltipTrigger>
+-        <TooltipPopup>{autoEnvironmentLabel ?? activeEnvironment?.label ?? "Run on"}</TooltipPopup>
+-      </Tooltip>
++      {environmentIcon}
+       {workspaceIcon}
+     </span>
+-  ) : (
+-    workspaceIcon
+   );
+   const triggerContent = (
+     <>
+@@ -272,6 +278,8 @@ const RunContextSelector = memo(function RunContextSelector({
+         {autoEnvironmentLabel ??
+           (showEnvironmentIndicator ? (activeEnvironment?.label ?? "Run on") : workspaceLabel)}
+       </ComposerContextLabel>
++      {/* Trailing in the panel, so every row label starts on the same edge. */}
++      {isPanel && showEnvironmentIndicator ? workspaceIcon : null}
+     </>
+   );
+ 
+@@ -279,7 +287,7 @@ const RunContextSelector = memo(function RunContextSelector({
+     return (
+       <span
+         className={cn(
+-          "inline-flex h-7 min-w-0 max-w-[48%] flex-initial items-center justify-start gap-1 rounded-md border border-transparent px-1.75 font-normal text-muted-foreground/70 text-xs sm:h-6",
++          "inline-flex h-7 min-w-0 max-w-[48%] flex-initial items-center justify-start gap-1 rounded-md border border-transparent px-1.75 font-normal text-foreground/70 text-xs sm:h-6 dark:text-muted-foreground",
+           isPanel && "max-w-full",
+           isPanel && THREAD_DETAILS_PANEL_LOCKED_ROW_CLASS,
+         )}
+@@ -313,7 +321,7 @@ const RunContextSelector = memo(function RunContextSelector({
+         ].join(" ")}
+       >
+         {triggerContent}
+-        {!isPanel ? <ChevronDownIcon className="size-3 shrink-0 opacity-50" /> : null}
++        {!isPanel ? <ChevronDownIcon className="size-3 shrink-0 mx-0!" /> : null}
+       </MenuTrigger>
+       <MenuPopup
+         align="start"
+@@ -748,7 +756,7 @@ export const BranchToolbar = memo(function BranchToolbar({
+       ref={setStripElement}
+       data-compact={labelsOverflow ? "" : undefined}
+       className={cn(
+-        "gap-1 text-xs font-normal text-muted-foreground/70",
++        "gap-1 text-xs font-normal text-foreground/70 dark:text-muted-foreground",
+         // Hide empty non-Git strips while retaining host width so controls can reappear as the chat grows.
+         !contextStripVisible && "pointer-events-none invisible absolute inset-x-0 top-full",
+       )}
+diff --git a/apps/web/src/components/BranchToolbarBranchSelector.tsx b/apps/web/src/components/BranchToolbarBranchSelector.tsx
+index 2ec576695640..acfb28d3e1a6 100644
+--- a/apps/web/src/components/BranchToolbarBranchSelector.tsx
++++ b/apps/web/src/components/BranchToolbarBranchSelector.tsx
+@@ -715,7 +715,7 @@ export function BranchToolbarBranchSelector({
+           >
+             <GitBranchIcon
+               className={cn(
+-                "size-3 shrink-0 opacity-70",
++                "size-3 shrink-0",
+                 displayMode === "panel" && THREAD_DETAILS_PANEL_ICON_CLASS,
+               )}
+             />
+@@ -726,9 +726,7 @@ export function BranchToolbarBranchSelector({
+                 className="w-full"
+               />
+             </ComposerContextLabel>
+-            {displayMode !== "panel" ? (
+-              <ChevronDownIcon className="size-3 shrink-0 opacity-50" />
+-            ) : null}
++            {displayMode !== "panel" ? <ChevronDownIcon className="size-3 shrink-0" /> : null}
+           </ComboboxTrigger>
+         </span>
+         {displayMode === "panel" && prNumber !== undefined && prUrl !== undefined ? (
+diff --git a/apps/web/src/components/ChatMarkdown.tsx b/apps/web/src/components/ChatMarkdown.tsx
+index 238024cf332a..5846cf18ae12 100644
+--- a/apps/web/src/components/ChatMarkdown.tsx
++++ b/apps/web/src/components/ChatMarkdown.tsx
+@@ -1590,7 +1590,7 @@ function ChatMarkdown({
+       className={cn(
+         "chat-markdown w-full min-w-0 [overflow-wrap:anywhere] [word-break:break-word]",
+         !inline &&
+-          "text-sm leading-relaxed text-foreground/[calc(80%+var(--appearance-contrast-boost)/5)]",
++          "text-sm leading-relaxed text-foreground/[calc(90%+var(--appearance-contrast-boost)/10)]",
+         className,
+       )}
+       data-streaming={componentState.isStreaming ? "" : undefined}
+diff --git a/apps/web/src/components/ComposerPromptEditorTiptap.tsx b/apps/web/src/components/ComposerPromptEditorTiptap.tsx
+index 3958f0149fc7..4ba2418c5169 100644
+--- a/apps/web/src/components/ComposerPromptEditorTiptap.tsx
++++ b/apps/web/src/components/ComposerPromptEditorTiptap.tsx
+@@ -1101,7 +1101,7 @@ function ComposerPromptEditorTiptapInner(
+ 
+   const editorAttributes = {
+     class: cn(
+-      "composer-tiptap -m-1 block max-h-52 min-h-19.5 overflow-y-auto p-1 whitespace-pre-wrap wrap-break-word bg-transparent leading-relaxed text-foreground focus:outline-none",
++      "composer-tiptap -m-1 block max-h-52 min-h-12 overflow-y-auto p-1 whitespace-pre-wrap wrap-break-word bg-transparent leading-relaxed text-foreground focus:outline-none",
+       className,
+     ),
+     "data-testid": "composer-editor",
+@@ -1839,7 +1839,7 @@ function ComposerPromptEditorTiptapInner(
+             {isEmpty && contextRecords.size === 0 && placeholder ? (
+               <div
+                 className={cn(
+-                  "pointer-events-none absolute inset-0 leading-relaxed text-placeholder/75",
++                  "pointer-events-none absolute inset-0 leading-relaxed text-placeholder",
+                   placeholderClassName,
+                 )}
+               >
+diff --git a/apps/web/src/components/EnvironmentMachineIcon.tsx b/apps/web/src/components/EnvironmentMachineIcon.tsx
+index e174bb9e2382..1609ed22b7dc 100644
+--- a/apps/web/src/components/EnvironmentMachineIcon.tsx
++++ b/apps/web/src/components/EnvironmentMachineIcon.tsx
+@@ -12,7 +12,7 @@ function LucideLike(props: SVGProps<SVGSVGElement>) {
+       viewBox="0 0 24 24"
+       fill="none"
+       stroke="currentColor"
+-      strokeWidth="2"
++      strokeWidth="1.75"
+       strokeLinecap="round"
+       strokeLinejoin="round"
+       {...props}
+@@ -23,8 +23,8 @@ function LucideLike(props: SVGProps<SVGSVGElement>) {
+ function MacMiniIcon(props: SVGProps<SVGSVGElement>) {
+   return (
+     <LucideLike {...props}>
+-      <rect width="20" height="8" x="2" y="8" rx="2" />
+-      <path d="M6 12h.01" />
++      <rect width="18" height="12" x="3" y="6" rx="2.5" />
++      <circle cx="7.5" cy="12" r="1" fill="currentColor" stroke="none" />
+     </LucideLike>
+   );
+ }
+diff --git a/apps/web/src/components/GitActionsControl.tsx b/apps/web/src/components/GitActionsControl.tsx
+index eea96772c84c..479b6d7c7f49 100644
+--- a/apps/web/src/components/GitActionsControl.tsx
++++ b/apps/web/src/components/GitActionsControl.tsx
+@@ -1151,6 +1151,14 @@ export default function GitActionsControl({
+       ? (quickAction.hint ?? "This action is currently unavailable.")
+       : null;
+   const gitActionProgress = resolveGitActionProgressPresentation(vcsActionState);
++  // A fresh draft with nothing to commit, push, or diff hides those rows until there is work.
++  const quietEmptyDraft =
++    isPanel &&
++    draftId !== undefined &&
++    gitActionProgress === null &&
++    quickAction.disabled &&
++    !changesTotals?.insertions &&
++    !changesTotals?.deletions;
+   const pendingDefaultBranchActionCopy = pendingDefaultBranchAction
+     ? resolveDefaultBranchActionDialogCopy({
+         action: pendingDefaultBranchAction.action,
+@@ -1684,7 +1692,7 @@ export default function GitActionsControl({
+             {initAction.isPending ? "Initializing..." : "Initialize Git"}
+           </span>
+         </ThreadDetailsControl>
+-      ) : compact && !gitActionProgress && !visibleInlineSuccess ? null : (
++      ) : quietEmptyDraft || (compact && !gitActionProgress && !visibleInlineSuccess) ? null : (
+         <ActionGroup
+           role="group"
+           aria-label="Git actions"
+@@ -1821,7 +1829,7 @@ export default function GitActionsControl({
+         </ActionGroup>
+       )}
+ 
+-      {isPanel && isRepo ? (
++      {isPanel && isRepo && !quietEmptyDraft ? (
+         <ThreadDetailsControl
+           type="button"
+           variant="ghost"
+@@ -1832,11 +1840,21 @@ export default function GitActionsControl({
+         >
+           <FileDiffIcon className={THREAD_DETAILS_PANEL_ICON_CLASS} aria-hidden />
+           <span className={cn("flex-1 text-left", THREAD_DETAILS_PANEL_LABEL_CLASS)}>Changes</span>
+-          <span className="flex items-center gap-1 font-mono text-2xs tabular-nums">
+-            <span className="text-diff-addition">
++          <span className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
++            <span
++              className={
++                changesTotals?.insertions
++                  ? "text-diff-addition-foreground"
++                  : "text-muted-foreground"
++              }
++            >
+               +{formatDiffCount(changesTotals?.insertions ?? 0)}
+             </span>
+-            <span className="text-diff-deletion">
++            <span
++              className={
++                changesTotals?.deletions ? "text-diff-deletion-foreground" : "text-muted-foreground"
++              }
++            >
+               -{formatDiffCount(changesTotals?.deletions ?? 0)}
+             </span>
+           </span>
+diff --git a/apps/web/src/components/Sidebar.tsx b/apps/web/src/components/Sidebar.tsx
+index 95da08df80b4..db839a675fb1 100644
+--- a/apps/web/src/components/Sidebar.tsx
++++ b/apps/web/src/components/Sidebar.tsx
+@@ -3136,11 +3136,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
+                                 key="working-shelf-header"
+                                 marker="working-header"
+                                 className="mt-auto"
+-                                label={
+-                                  workingShelfExpanded
+-                                    ? "Working"
+-                                    : `Working (${workingThreads.length})`
+-                                }
++                                label="Working"
++                                count={workingThreads.length}
+                                 toggle={{
+                                   expanded: workingShelfExpanded,
+                                   onToggle: toggleWorkingShelf,
+@@ -3154,11 +3151,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
+                                 key="snoozed-shelf-header"
+                                 marker="snoozed-header"
+                                 className={cn(workingThreads.length === 0 && "mt-auto")}
+-                                label={
+-                                  snoozedShelfExpanded
+-                                    ? "Snoozed"
+-                                    : `Snoozed (${snoozedThreads.length})`
+-                                }
++                                label="Snoozed"
++                                count={snoozedThreads.length}
+                                 toggle={{
+                                   expanded: snoozedShelfExpanded,
+                                   onToggle: toggleSnoozedShelf,
+@@ -3174,9 +3168,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
+                                 className={cn(
+                                   workingThreads.length + snoozedThreads.length === 0 && "mt-auto",
+                                 )}
+-                                label={
+-                                  settledShelfExpanded ? "Settled" : `Settled (${settledCount})`
+-                                }
++                                label="Settled"
++                                count={settledCount}
+                                 dragging={from !== null}
+                                 isDropTarget={dragTargetSection === "settled"}
+                                 toggle={{
+diff --git a/apps/web/src/components/ThreadStatusIndicators.tsx b/apps/web/src/components/ThreadStatusIndicators.tsx
+index e31f38ec2b09..75cb84a318a2 100644
+--- a/apps/web/src/components/ThreadStatusIndicators.tsx
++++ b/apps/web/src/components/ThreadStatusIndicators.tsx
+@@ -287,11 +287,12 @@ function PullRequestBadge({
+   return (
+     <Tooltip key={opensList ? "list" : "link"}>
+       <TooltipTrigger render={control}>
+-        <span
+-          className={cn("contents font-normal text-xs tabular-nums", presentation.toneClassName)}
+-        >
+-          <presentation.Icon aria-hidden className="size-3 shrink-0" />
+-          <span>{presentation.text}</span>
++        <span className="contents font-normal text-xs tabular-nums">
++          <presentation.Icon
++            aria-hidden
++            className={cn("size-3 shrink-0", presentation.toneClassName)}
++          />
++          <span className="text-secondary-label">{presentation.text}</span>
+         </span>
+       </TooltipTrigger>
+       <TooltipPopup
+@@ -800,7 +801,7 @@ export function ThreadWorktreeIndicator({
+           />
+         }
+       >
+-        <FolderGit2Icon className="size-3 text-muted-foreground/40" />
++        <FolderGit2Icon className="size-3.5 shrink-0 text-icon-muted" />
+       </TooltipTrigger>
+       <TooltipPopup side="top">{tooltip}</TooltipPopup>
+     </Tooltip>
+diff --git a/apps/web/src/components/chat/ChatComposer.tsx b/apps/web/src/components/chat/ChatComposer.tsx
+index aeb55cdfa672..dc2fc5c5205c 100644
+--- a/apps/web/src/components/chat/ChatComposer.tsx
++++ b/apps/web/src/components/chat/ChatComposer.tsx
+@@ -72,7 +72,7 @@ import {
+   extendReplacementRangeForTrailingSpace,
+   replaceTextRange,
+ } from "../../composer-logic";
+-import { DISCONNECTED_COMPOSER_PLACEHOLDER } from "../../composerPlaceholder";
++import { DEFAULT_COMPOSER_PLACEHOLDER } from "../../composerPlaceholder";
+ import {
+   deriveComposerSendState,
+   getAntigravitySendBlockReason,
+@@ -3596,7 +3596,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
+             data-chat-composer-surface="true"
+             data-chat-composer-mobile-collapsed={isComposerCollapsedMobile ? "true" : "false"}
+             className={cn(
+-              "rounded-3xl transition-[background-color] duration-200",
++              "rounded-2xl transition-[background-color] duration-200",
+               "in-data-[thread-context-over]:bg-accent/45 in-data-[thread-context-over]:ring-1 in-data-[thread-context-over]:ring-inset in-data-[thread-context-over]:ring-primary/70",
+               isDragOverComposer ? "bg-accent/45 ring-1 ring-inset ring-primary/70" : null,
+               projectSelectionRequired ? "opacity-75" : null,
+@@ -3793,9 +3793,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
+                               ? "Choose a project above to start a thread"
+                               : showProviderUnavailable
+                                 ? "Enable a provider in Settings to send a message"
+-                                : phase === "disconnected"
+-                                  ? DISCONNECTED_COMPOSER_PLACEHOLDER
+-                                  : "Ask anything, @tag files/folders, $use skills, or / for commands"
++                                : DEFAULT_COMPOSER_PLACEHOLDER
+                     }
+                     disabled={
+                       isConnecting ||
+@@ -3863,7 +3861,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
+                   data-chat-composer-controls="left"
+                   data-chat-composer-footer-controls="true"
+                   className={cn(
+-                    "relative -m-1 -ms-3.5 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto p-1 ps-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
++                    "relative -m-1 -ms-3.5 flex min-w-0 flex-1 items-center gap-0 overflow-x-auto p-1 ps-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                     isComposerResting && "hidden",
+                   )}
+                 >
+diff --git a/apps/web/src/components/chat/ComposerControl.tsx b/apps/web/src/components/chat/ComposerControl.tsx
+index 255b74af4ace..6f1824fd7264 100644
+--- a/apps/web/src/components/chat/ComposerControl.tsx
++++ b/apps/web/src/components/chat/ComposerControl.tsx
+@@ -14,8 +14,8 @@ function composerControlClassName(size: ComposerControlSize, className?: string)
+     "relative inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap rounded-(--control-radius) border border-transparent text-base outline-none hover:bg-accent data-pressed:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64 data-disabled:pointer-events-none data-disabled:opacity-64 pointer-coarse:after:absolute pointer-coarse:after:size-full pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 [&:active:not([aria-haspopup])]:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:-mx-0.5 [&_svg[data-composer-control-icon]]:mx-0",
+     "[&_:is([data-composer-control-label],[data-chat-provider-model-picker-label])]:[text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:[&_:is([data-composer-control-label],[data-chat-provider-model-picker-label])]:py-1.5",
+     size === "xs"
+-      ? "h-7 gap-1 px-1.75 font-normal text-muted-foreground/70 text-sm hover:text-foreground/80 sm:h-6 sm:text-xs [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5 [&_svg[data-composer-control-chevron]]:ms-0 [&_svg[data-composer-control-chevron]]:-me-1"
+-      : "h-7 gap-1.5 px-2.5 font-medium text-secondary-label [&_svg:not([class*='text-'])]:text-muted-foreground hover:text-foreground sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4",
++      ? "h-7 gap-1 px-1.75 font-normal text-foreground/70 text-sm hover:text-foreground dark:text-muted-foreground sm:h-6 sm:text-xs [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5 [&_svg[data-composer-control-chevron]]:ms-0 [&_svg[data-composer-control-chevron]]:-me-1"
++      : "h-7 gap-1.5 px-2 font-medium text-foreground/80 [&_svg:not([class*='text-'])]:text-muted-foreground hover:text-foreground sm:text-sm [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4",
+     "aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:hover:bg-accent/80",
+     className,
+   );
+@@ -78,7 +78,7 @@ export function ComposerControlChevron({
+       aria-hidden="true"
+       className={cn(
+         "shrink-0",
+-        size === "xs" ? "size-3 text-current opacity-50" : "size-3.5 text-icon-muted",
++        size === "xs" ? "size-3 text-current" : "size-3.5 text-icon-muted",
+         className,
+       )}
+       data-composer-control-chevron
+diff --git a/apps/web/src/components/chat/ComposerControlsBar.tsx b/apps/web/src/components/chat/ComposerControlsBar.tsx
+index 158cc160984d..fd3b065a565e 100644
+--- a/apps/web/src/components/chat/ComposerControlsBar.tsx
++++ b/apps/web/src/components/chat/ComposerControlsBar.tsx
+@@ -166,12 +166,7 @@ export function ComposerControlsBar(props: {
+       ? [
+           {
+             id: "traits",
+-            content: (
+-              <>
+-                <ComposerControlSeparator size={composerControlsCollapsed ? "xs" : "sm"} />
+-                {restingProviderTraitsPicker}
+-              </>
+-            ),
++            content: restingProviderTraitsPicker,
+           },
+         ]
+       : []),
+@@ -229,7 +224,7 @@ export function ComposerControlsBar(props: {
+               !showInlineRestingControls &&
+                 "@max-[640px]/composer-surface:[&_[data-chat-provider-model-picker-label]]:w-0 @max-[640px]/composer-surface:[&_[data-chat-provider-model-picker-label]]:flex-none",
+             )
+-          : "-ms-2.5 min-w-13"
++          : "-ms-2 min-w-13"
+       }
+       terminalOpen={terminalOpen}
+       open={modelPickerOpen}
+diff --git a/apps/web/src/components/chat/ComposerFooterControls.tsx b/apps/web/src/components/chat/ComposerFooterControls.tsx
+index b26efe32fbd3..22a8790c17d1 100644
+--- a/apps/web/src/components/chat/ComposerFooterControls.tsx
++++ b/apps/web/src/components/chat/ComposerFooterControls.tsx
+@@ -11,12 +11,7 @@ import { type ComponentProps, memo } from "react";
+ import type { ContextWindowSnapshot } from "../../lib/contextWindow";
+ import { Select, SelectItem, SelectPopup, SelectValue } from "../ui/select";
+ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+-import {
+-  ComposerControl,
+-  ComposerControlIcon,
+-  ComposerControlSeparator,
+-  ComposerSelectControl,
+-} from "./ComposerControl";
++import { ComposerControl, ComposerControlIcon, ComposerSelectControl } from "./ComposerControl";
+ import { useComposerMenuProps } from "./composerEventScope";
+ import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
+ import { ContextWindowMeter, ContextWindowMeterPlaceholder } from "./ContextWindowMeter";
+@@ -53,47 +48,42 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
+       : "Default mode. Click to enter plan mode";
+ 
+   const interactionModeToggle = props.showInteractionModeToggle ? (
+-    <>
+-      <ComposerControlSeparator size={size} />
+-      <Tooltip>
+-        <TooltipTrigger
+-          render={
+-            <ComposerControl
+-              size={size}
+-              className="shrink-0 whitespace-nowrap"
+-              aria-pressed={props.interactionMode === "plan"}
+-              type="button"
+-              onClick={props.onToggleInteractionMode}
+-              aria-label={interactionModeTooltip}
+-            />
+-          }
+-        >
+-          {props.interactionMode === "plan" ? (
+-            <ComposerControlIcon
+-              icon={PencilRulerIcon}
+-              size={size}
+-              className="text-current opacity-100"
+-            />
+-          ) : (
+-            <ComposerControlIcon
+-              icon={BotIcon}
+-              size={size}
+-              opticalSize={size === "xs" ? "default" : "large"}
+-            />
+-          )}
+-          <span data-composer-control-label className="sr-only sm:not-sr-only">
+-            {props.interactionMode === "plan" ? "Plan" : "Build"}
+-          </span>
+-        </TooltipTrigger>
+-        <TooltipPopup side="top">{interactionModeTooltip}</TooltipPopup>
+-      </Tooltip>
+-    </>
++    <Tooltip>
++      <TooltipTrigger
++        render={
++          <ComposerControl
++            size={size}
++            className="shrink-0 whitespace-nowrap"
++            aria-pressed={props.interactionMode === "plan"}
++            type="button"
++            onClick={props.onToggleInteractionMode}
++            aria-label={interactionModeTooltip}
++          />
++        }
++      >
++        {props.interactionMode === "plan" ? (
++          <ComposerControlIcon
++            icon={PencilRulerIcon}
++            size={size}
++            className="text-current opacity-100"
++          />
++        ) : (
++          <ComposerControlIcon
++            icon={BotIcon}
++            size={size}
++            opticalSize={size === "xs" ? "default" : "large"}
++          />
++        )}
++        <span data-composer-control-label className="sr-only sm:not-sr-only">
++          {props.interactionMode === "plan" ? "Plan" : "Build"}
++        </span>
++      </TooltipTrigger>
++      <TooltipPopup side="top">{interactionModeTooltip}</TooltipPopup>
++    </Tooltip>
+   ) : null;
+ 
+   return (
+     <>
+-      <ComposerControlSeparator size={size} />
+-
+       <Tooltip>
+         <Select
+           open={open}
+diff --git a/apps/web/src/components/chat/ComposerPrimaryActions.tsx b/apps/web/src/components/chat/ComposerPrimaryActions.tsx
+index 03d74039945e..e2c2a95747c5 100644
+--- a/apps/web/src/components/chat/ComposerPrimaryActions.tsx
++++ b/apps/web/src/components/chat/ComposerPrimaryActions.tsx
+@@ -310,10 +310,10 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
+     <button
+       type={showResume ? "button" : "submit"}
+       className={cn(
+-        "relative isolate flex h-9 w-9 items-center justify-center overflow-hidden rounded-full shadow-xs transition-all duration-150 enabled:cursor-pointer enabled:inset-shadow-control-highlight hover:scale-105 active:inset-shadow-control-pressed active:shadow-none disabled:pointer-events-none disabled:opacity-64 disabled:shadow-none disabled:hover:scale-100 sm:h-8 sm:w-8 [&_svg]:pointer-events-none",
++        "relative isolate flex h-9 w-9 items-center justify-center overflow-hidden rounded-full shadow-xs transition-all duration-150 enabled:cursor-pointer enabled:inset-shadow-control-highlight hover:scale-105 active:inset-shadow-control-pressed active:shadow-none disabled:pointer-events-none disabled:shadow-none disabled:hover:scale-100 sm:h-8 sm:w-8 [&_svg]:pointer-events-none",
+         stageBackdropVariant
+-          ? "bg-transparent text-white enabled:shadow-black/24 enabled:hover:brightness-110"
+-          : "bg-message-action text-message-action-foreground enabled:shadow-message-action/24 hover:bg-message-action-hover",
++          ? "bg-transparent text-white enabled:shadow-black/24 enabled:hover:brightness-110 disabled:opacity-64"
++          : "bg-message-action text-message-action-foreground enabled:shadow-message-action/24 hover:bg-message-action-hover disabled:bg-foreground/12 disabled:text-muted-foreground",
+       )}
+       {...pointerFocusProps}
+       onClick={showResume ? onResume : onSubmitMessage}
+@@ -368,12 +368,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
+           render={
+             <button
+               type="button"
+-              className={cn(
+-                "flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-64 sm:h-8 [&_svg]:pointer-events-none [&_svg]:size-3.5",
+-                keepFullHistory
+-                  ? "border-border text-muted-foreground hover:text-foreground"
+-                  : "border-warning/40 text-warning hover:bg-warning/8",
+-              )}
++              className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-(--control-radius) px-2 font-medium text-base text-foreground/80 tabular-nums outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-64 sm:text-sm aria-pressed:bg-accent/60 aria-pressed:text-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:text-muted-foreground"
+               {...pointerFocusProps}
+               aria-pressed={!keepFullHistory}
+               aria-label={`Compact ${compactTokens} tokens of history before sending`}
+@@ -383,8 +378,8 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
+           }
+         >
+           <Minimize2Icon aria-hidden="true" />
+-          {keepFullHistory ? "Full" : "Compact"}
+-          <span>{compactTokens}</span>
++          {/* The token count lives in the tooltip so the permission label keeps its room. */}
++          {keepFullHistory ? "Keep full" : "Compact next"}
+         </TooltipTrigger>
+         <TooltipPopup>
+           <div>
+diff --git a/apps/web/src/components/chat/ComposerSurface.tsx b/apps/web/src/components/chat/ComposerSurface.tsx
+index 3ff7fb51510e..ad689bf739bc 100644
+--- a/apps/web/src/components/chat/ComposerSurface.tsx
++++ b/apps/web/src/components/chat/ComposerSurface.tsx
+@@ -18,13 +18,13 @@ function Shell({
+         "[html[data-theme-id]_&]:[--chat-composer-glass-surface:var(--app-theme-surface-raised)] [html[data-theme-id]_&]:[--chat-composer-outline:var(--app-theme-toolbar-border)]",
+         "dark:[html[data-theme-id]:not([data-theme-id=t3-chat])_&]:[--chat-composer-highlight:color-mix(in_srgb,var(--app-theme-input)_12%,transparent)] dark:[html[data-theme-id]:not([data-theme-id=t3-chat])_&]:[--chat-composer-outline:color-mix(in_srgb,var(--app-theme-input)_30%,var(--background))]",
+         "dark:[html[data-theme-id=t3-chat]_&]:[--chat-composer-highlight:color-mix(in_srgb,#432d48_12%,transparent)] dark:[html[data-theme-id=t3-chat]_&]:[--chat-composer-outline:#241e28]",
+-        "before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-3xl before:bg-(--chat-composer-glass-surface)/(--glass-opacity) before:backdrop-blur-(--glass-blur) before:backdrop-saturate-(--glass-saturation)",
++        "before:pointer-events-none before:absolute before:inset-0 before:z-0 before:rounded-2xl before:bg-(--chat-composer-glass-surface)/(--glass-opacity) before:backdrop-blur-(--glass-blur) before:backdrop-saturate-(--glass-saturation)",
+         "not-supports-[((backdrop-filter:blur(1px))_or_(-webkit-backdrop-filter:blur(1px)))]:before:bg-(--chat-composer-glass-surface)",
+         "has-data-[composer-banner-surface=attached]:before:hidden data-model-strip-transition:before:hidden",
+         contextStrip && [
+           "[--chat-composer-context-extension:2.25rem] sm:[--chat-composer-context-extension:2rem]",
+           "supports-[clip-path:shape(from_0_0,line_to_1px_1px)]:before:rounded-none",
+-          "before:[clip-path:shape(from_0_22px,curve_to_22px_0_with_0_9.85px/9.85px_0,line_to_calc(100%-22px)_0,curve_to_100%_22px_with_calc(100%-9.85px)_0/100%_9.85px,line_to_100%_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset)),curve_to_calc(100%-var(--chat-composer-drawer-inset))_calc(100%-var(--chat-composer-context-extension))_with_100%_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset)*0.4477)/calc(100%-var(--chat-composer-drawer-inset)*0.4477)_calc(100%-var(--chat-composer-context-extension)),line_to_calc(100%-var(--chat-composer-drawer-inset))_calc(100%-16px),curve_to_calc(100%-var(--chat-composer-drawer-inset)-16px)_100%_with_calc(100%-var(--chat-composer-drawer-inset))_calc(100%-7.16px)/calc(100%-var(--chat-composer-drawer-inset)-7.16px)_100%,line_to_calc(var(--chat-composer-drawer-inset)+16px)_100%,curve_to_var(--chat-composer-drawer-inset)_calc(100%-16px)_with_calc(var(--chat-composer-drawer-inset)+7.16px)_100%/var(--chat-composer-drawer-inset)_calc(100%-7.16px),line_to_var(--chat-composer-drawer-inset)_calc(100%-var(--chat-composer-context-extension)),curve_to_0_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset))_with_calc(var(--chat-composer-drawer-inset)*0.4477)_calc(100%-var(--chat-composer-context-extension))/0_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset)*0.4477),line_to_0_22px,close)]",
++          "before:[clip-path:shape(from_0_16px,curve_to_16px_0_with_0_7.16px/7.16px_0,line_to_calc(100%-16px)_0,curve_to_100%_16px_with_calc(100%-7.16px)_0/100%_7.16px,line_to_100%_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset)),curve_to_calc(100%-var(--chat-composer-drawer-inset))_calc(100%-var(--chat-composer-context-extension))_with_100%_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset)*0.4477)/calc(100%-var(--chat-composer-drawer-inset)*0.4477)_calc(100%-var(--chat-composer-context-extension)),line_to_calc(100%-var(--chat-composer-drawer-inset))_calc(100%-16px),curve_to_calc(100%-var(--chat-composer-drawer-inset)-16px)_100%_with_calc(100%-var(--chat-composer-drawer-inset))_calc(100%-7.16px)/calc(100%-var(--chat-composer-drawer-inset)-7.16px)_100%,line_to_calc(var(--chat-composer-drawer-inset)+16px)_100%,curve_to_var(--chat-composer-drawer-inset)_calc(100%-16px)_with_calc(var(--chat-composer-drawer-inset)+7.16px)_100%/var(--chat-composer-drawer-inset)_calc(100%-7.16px),line_to_var(--chat-composer-drawer-inset)_calc(100%-var(--chat-composer-context-extension)),curve_to_0_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset))_with_calc(var(--chat-composer-drawer-inset)*0.4477)_calc(100%-var(--chat-composer-context-extension))/0_calc(100%-var(--chat-composer-context-extension)-var(--chat-composer-drawer-inset)*0.4477),line_to_0_16px,close)]",
+           "not-supports-[clip-path:shape(from_0_0,line_to_1px_1px)]:before:bottom-(--chat-composer-context-extension)",
+         ],
+         className,
+@@ -45,7 +45,7 @@ function Host({ className, ...props }: ComponentProps<"div">) {
+     <div
+       data-slot="composer-host"
+       className={cn(
+-        "relative z-10 w-full rounded-3xl shadow-composer after:z-1 dark:shadow-none",
++        "relative z-10 w-full rounded-2xl shadow-composer after:z-1 dark:shadow-none",
+         outlineClasses,
+         contextSeamClasses,
+         "group-has-data-[composer-banner-surface=attached]/composer-surface:shadow-none group-has-data-[composer-banner-surface=attached]/composer-surface:after:hidden",
+@@ -61,7 +61,7 @@ function Main({ className, ...props }: ComponentProps<"div">) {
+     <div
+       data-chat-composer-main-surface="true"
+       className={cn(
+-        "group relative z-10 rounded-3xl p-px",
++        "group relative z-10 rounded-2xl p-px",
+         "group-data-model-strip-transition/composer-surface:bg-(--chat-composer-glass-surface)/(--glass-opacity) group-data-model-strip-transition/composer-surface:backdrop-blur-(--glass-blur) group-data-model-strip-transition/composer-surface:backdrop-saturate-(--glass-saturation)",
+         outlineClasses,
+         contextSeamClasses,
+@@ -84,8 +84,8 @@ function ContextStrip({ className, ...props }: ComponentProps<"div">) {
+       data-slot="composer-context-strip"
+       className={cn(
+         "group/composer-context relative isolate mx-auto -mt-4 flex w-[calc(100%-2*var(--chat-composer-drawer-inset))] items-center gap-2 overflow-x-clip overflow-y-visible px-2 pt-5 pb-1",
+-        "before:absolute before:inset-0 before:-z-1 before:rounded-b-2xl before:border before:border-(--chat-composer-outline) before:mask-b-from-transparent before:mask-b-from-(position:--spacing-composer-seam) before:mask-b-to-black before:mask-b-to-(position:--spacing-composer-seam) before:shadow-composer",
+-        "dark:before:border-white/7 dark:before:bg-composer-seam-below dark:before:shadow-composer-dark",
++        "before:absolute before:inset-0 before:-z-1 before:rounded-b-2xl before:border before:border-(--chat-composer-outline) before:mask-b-from-transparent before:mask-b-from-(position:--spacing-composer-seam) before:mask-b-to-black before:mask-b-to-(position:--spacing-composer-seam)",
++        "before:bg-(--chat-composer-glass-surface) dark:before:bg-transparent dark:before:bg-composer-seam-below",
+         "group-has-data-[composer-banner-surface=attached]/composer-surface:before:bg-(--chat-composer-glass-surface)/(--glass-opacity) group-has-data-[composer-banner-surface=attached]/composer-surface:before:backdrop-blur-(--glass-blur) group-has-data-[composer-banner-surface=attached]/composer-surface:before:backdrop-saturate-(--glass-saturation)",
+         "not-supports-[clip-path:shape(from_0_0,line_to_1px_1px)]:before:bg-(--chat-composer-glass-surface)/(--glass-opacity) not-supports-[clip-path:shape(from_0_0,line_to_1px_1px)]:before:backdrop-blur-(--glass-blur) not-supports-[clip-path:shape(from_0_0,line_to_1px_1px)]:before:backdrop-saturate-(--glass-saturation)",
+         className,
+diff --git a/apps/web/src/components/chat/DiffStatLabel.tsx b/apps/web/src/components/chat/DiffStatLabel.tsx
+index a4110afe8a23..7f759a87eade 100644
+--- a/apps/web/src/components/chat/DiffStatLabel.tsx
++++ b/apps/web/src/components/chat/DiffStatLabel.tsx
+@@ -40,10 +40,10 @@ export const DiffStatLabel = memo(function DiffStatLabel(props: {
+           className,
+         )}
+       >
+-        <span aria-hidden="true" className="font-mono text-diff-addition">
++        <span aria-hidden="true" className="font-mono text-diff-addition-foreground">
+           +{formatCompactDiffCount(additions)}
+         </span>
+-        <span aria-hidden="true" className="font-mono text-diff-deletion">
++        <span aria-hidden="true" className="font-mono text-diff-deletion-foreground">
+           -{formatCompactDiffCount(deletions)}
+         </span>
+       </span>
+diff --git a/apps/web/src/components/chat/MarkdownDetails.tsx b/apps/web/src/components/chat/MarkdownDetails.tsx
+index ff70b3c71119..b794ce73e513 100644
+--- a/apps/web/src/components/chat/MarkdownDetails.tsx
++++ b/apps/web/src/components/chat/MarkdownDetails.tsx
+@@ -53,7 +53,7 @@ export function MarkdownDetails({
+         </CollapsibleTrigger>
+         <CollapsiblePanel ref={revealRef} hiddenUntilFound={searching}>
+           <div
+-            className="pb-3 ps-6 text-foreground/[calc(80%+var(--appearance-contrast-boost)/5)]"
++            className="pb-3 ps-6 text-foreground/[calc(90%+var(--appearance-contrast-boost)/10)]"
+             data-markdown-details-content=""
+           >
+             {content}
+diff --git a/apps/web/src/components/chat/MessagesTimeline.tsx b/apps/web/src/components/chat/MessagesTimeline.tsx
+index aa614d2e413d..a63cc720372f 100644
+--- a/apps/web/src/components/chat/MessagesTimeline.tsx
++++ b/apps/web/src/components/chat/MessagesTimeline.tsx
+@@ -1082,9 +1082,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
+           className="flex h-full items-center justify-center ps-(--chat-lane-inset-start) pe-(--chat-lane-inset-end)"
+           style={{ paddingBottom: emptyPlaceholderInset }}
+         >
+-          <p className="text-sm text-muted-foreground/30">
+-            Send a message to start the conversation.
+-          </p>
++          <p className="text-sm text-muted-foreground">Send a message to start the conversation.</p>
+         </div>
+       </>
+     );
+diff --git a/apps/web/src/components/chat/OpenInPicker.tsx b/apps/web/src/components/chat/OpenInPicker.tsx
+index 50e18dfe523b..c86ad9203863 100644
+--- a/apps/web/src/components/chat/OpenInPicker.tsx
++++ b/apps/web/src/components/chat/OpenInPicker.tsx
+@@ -410,6 +410,13 @@ export const OpenInPicker = memo(function OpenInPicker({
+             className={cn(
+               isPanel ? THREAD_DETAILS_PANEL_ICON_CLASS : "size-3.5",
+               getOpenInIconClass(primaryOption.kind),
++              // Full-color app icons outshout the panel's line icons until the row is in use.
++              isPanel &&
++                "grayscale dark:opacity-70 group-hover/details-split:opacity-100 group-hover/details-split:grayscale-0 group-has-[[data-popup-open]]/details-split:opacity-100 group-has-[[data-popup-open]]/details-split:grayscale-0",
++              // A hairline keeps pale app icons from dissolving into the card.
++              isPanel &&
++                primaryOption.kind === "brand" &&
++                "rounded-sm ring-1 ring-black/10 dark:ring-white/15",
+             )}
+           />
+         ) : isPanel ? (
+diff --git a/apps/web/src/components/chat/ProposedPlanCard.tsx b/apps/web/src/components/chat/ProposedPlanCard.tsx
+index 979451d47dec..90a4b4950ff0 100644
+--- a/apps/web/src/components/chat/ProposedPlanCard.tsx
++++ b/apps/web/src/components/chat/ProposedPlanCard.tsx
+@@ -158,7 +158,7 @@ export const ProposedPlanCard = memo(function ProposedPlanCard({
+   };
+ 
+   return (
+-    <div className="rounded-3xl border border-border/80 bg-card/70 p-4 sm:p-5">
++    <div className="rounded-2xl border border-border/80 bg-card/70 p-4 sm:p-5">
+       <div className="flex flex-wrap items-center justify-between gap-3">
+         <div className="flex min-w-0 items-center gap-2">
+           <Badge variant="secondary">Plan</Badge>
+diff --git a/apps/web/src/components/chat/ProviderSubagentBar.tsx b/apps/web/src/components/chat/ProviderSubagentBar.tsx
+index de67cc2c9639..a3763c96d111 100644
+--- a/apps/web/src/components/chat/ProviderSubagentBar.tsx
++++ b/apps/web/src/components/chat/ProviderSubagentBar.tsx
+@@ -45,7 +45,7 @@ export function ProviderSubagentBar(props: {
+   // chat column on a wide window, and one row there squeezes out the model
+   // and status, so the status drops to its own line instead.
+   return (
+-    <div className="flex min-h-12 items-center gap-3 rounded-3xl py-2 ps-5 pe-2 text-sm">
++    <div className="flex min-h-12 items-center gap-3 rounded-2xl py-2 ps-5 pe-2 text-sm">
+       <div className="flex min-w-0 flex-1 items-center gap-3 @max-[560px]/composer-surface:flex-col @max-[560px]/composer-surface:items-start @max-[560px]/composer-surface:gap-0.5">
+         <span className="flex min-w-0 max-w-full items-center gap-2">
+           {props.provider ? (
+diff --git a/apps/web/src/components/chat/ThreadDetailsCard.tsx b/apps/web/src/components/chat/ThreadDetailsCard.tsx
+index 495e758fb147..3216c6c376c1 100644
+--- a/apps/web/src/components/chat/ThreadDetailsCard.tsx
++++ b/apps/web/src/components/chat/ThreadDetailsCard.tsx
+@@ -123,7 +123,7 @@ export function ThreadDetailsCard({
+   const card = (
+     <div
+       className={cn(
+-        "dropdown-glass isolate contain-paint grid max-h-full grid-rows-[minmax(0,1fr)] overflow-hidden rounded-3xl",
++        "dropdown-glass isolate contain-paint grid max-h-full grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl",
+         mode === "popover" &&
+           "max-h-[min(calc(100dvh-6.5rem),calc(var(--available-height,100dvh)-1rem))]",
+       )}
+diff --git a/apps/web/src/components/chat/ThreadDetailsPrRow.tsx b/apps/web/src/components/chat/ThreadDetailsPrRow.tsx
+index 155c9dffcd0d..0854906ce2da 100644
+--- a/apps/web/src/components/chat/ThreadDetailsPrRow.tsx
++++ b/apps/web/src/components/chat/ThreadDetailsPrRow.tsx
+@@ -398,7 +398,8 @@ export function ThreadDetailsPrRow({
+       </Tooltip>
+     ) : null;
+ 
+-  const openRow = (text: string, part: "row" | "primary") => (
++  // The title row wraps to two lines; a conventional-commit prefix eats most of one line.
++  const openRow = (text: string, part: "row" | "primary", wrap = false) => (
+     <Tooltip>
+       <TooltipTrigger
+         render={
+@@ -407,6 +408,8 @@ export function ThreadDetailsPrRow({
+             variant="ghost"
+             size="sm"
+             part={part}
++            multiline={wrap}
++            className={wrap ? "items-start [&>svg]:mt-0.5" : undefined}
+             aria-label={openAriaLabel}
+             onClick={onOpen}
+             onAuxClick={onOpen}
+@@ -414,7 +417,14 @@ export function ThreadDetailsPrRow({
+         }
+       >
+         {icon}
+-        <span className={cn("min-w-0 flex-1 truncate text-left", THREAD_DETAILS_PANEL_LABEL_CLASS)}>
++        <span
++          className={cn(
++            "min-w-0 flex-1 text-left",
++            wrap
++              ? "line-clamp-2 whitespace-normal leading-4.5"
++              : cn("truncate", THREAD_DETAILS_PANEL_LABEL_CLASS),
++          )}
++        >
+           {text}
+         </span>
+       </TooltipTrigger>
+@@ -427,9 +437,9 @@ export function ThreadDetailsPrRow({
+   return (
+     <>
+       {detail !== null && (showChecks || trailingAction !== null || watching) ? (
+-        <div className="pb-2">
+-          {openRow(detail.title, "row")}
+-          <div className="flex h-6 min-w-0 items-center gap-0.5 ps-9 pe-1 text-xs text-muted-foreground">
++        <div className="pb-1.5">
++          {openRow(detail.title, "row", true)}
++          <div className="flex h-5 min-w-0 items-center gap-0.5 ps-9 pe-1 text-xs text-muted-foreground">
+             <span className="me-1 shrink-0 tabular-nums">#{number}</span>
+             {showChecks && checksRollup !== null ? (
+               <PullRequestChecksPopover
+diff --git a/apps/web/src/components/chat/ThreadDetailsSection.tsx b/apps/web/src/components/chat/ThreadDetailsSection.tsx
+index ff58b6f1f19e..00aacd5a7b15 100644
+--- a/apps/web/src/components/chat/ThreadDetailsSection.tsx
++++ b/apps/web/src/components/chat/ThreadDetailsSection.tsx
+@@ -26,7 +26,7 @@ export function ThreadDetailsSection({
+     >
+       <div
+         className={cn(
+-          "mb-1 flex min-h-8 min-w-0 items-center justify-between gap-2 px-1.5",
++          "mb-1 flex min-h-8 min-w-0 items-center justify-between gap-2 px-2.5",
+           !showHeading && "hidden",
+         )}
+       >
+diff --git a/apps/web/src/components/chat/ThreadRelationshipsControl.tsx b/apps/web/src/components/chat/ThreadRelationshipsControl.tsx
+index 41875ace4cc2..d27b809b6f72 100644
+--- a/apps/web/src/components/chat/ThreadRelationshipsControl.tsx
++++ b/apps/web/src/components/chat/ThreadRelationshipsControl.tsx
+@@ -72,6 +72,7 @@ import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
+ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+ import { toastManager } from "../ui/toast";
+ import {
++  THREAD_DETAILS_PANEL_ICON_CLASS,
+   THREAD_DETAILS_PANEL_SPLIT_GROUP_CLASS,
+   THREAD_DETAILS_PANEL_ROW_CONTENT_CLASS,
+   THREAD_DETAILS_PANEL_SPLIT_SEPARATOR_CLASS,
+@@ -133,15 +134,24 @@ function ThreadLineageGroup(props: {
+     <div>
+       {props.label ? (
+         <CollapsibleSectionHeader
+-          variant="panel"
++          variant="row"
++          icon={<BotIcon aria-hidden className={THREAD_DETAILS_PANEL_ICON_CLASS} />}
+           expanded={expanded}
+           onClick={() => setExpanded(!expanded)}
+           accessory={
+-            failedCount > 0 ? <SectionHeaderStatus>{failedCount} failed</SectionHeaderStatus> : null
++            <>
++              {failedCount > 0 ? (
++                <SectionHeaderStatus>{failedCount} failed</SectionHeaderStatus>
++              ) : null}
++              {expanded ? null : (
++                <span className="text-xs font-normal tabular-nums text-muted-foreground">
++                  {props.rows.length}
++                </span>
++              )}
++            </>
+           }
+         >
+           {props.label}
+-          {!expanded && ` (${props.rows.length})`}
+         </CollapsibleSectionHeader>
+       ) : null}
+       {expanded ? (
+@@ -397,6 +407,8 @@ export function ThreadRelationshipsPanel(props: {
+     <ThreadDetailsSection
+       headingId="thread-details-lineage-heading"
+       title={runningCount > 0 ? `Lineage · ${runningCount} running` : "Lineage"}
++      // A lone "Previous agents" row names itself; the heading returns for status or actions.
++      showHeading={runningCount > 0 || canDetach || related.length > 0 || active.length > 0}
+       data-thread-relationships-panel
+       actions={
+         canDetach ? (
+diff --git a/apps/web/src/components/chat/TimelineMinimap.tsx b/apps/web/src/components/chat/TimelineMinimap.tsx
+index c4cc203e8a75..773bc14ff7b1 100644
+--- a/apps/web/src/components/chat/TimelineMinimap.tsx
++++ b/apps/web/src/components/chat/TimelineMinimap.tsx
+@@ -221,7 +221,7 @@ export function TimelineMinimap({
+                   aria-hidden="true"
+                   className={cn(
+                     "group/strip pointer-events-none absolute left-0 h-0.5 w-6 origin-left -translate-y-1/2 rounded-full transition-transform duration-150",
+-                    activeDistance === 0 ? "bg-muted-foreground/75" : "bg-muted-foreground/35",
++                    activeDistance === 0 ? "bg-muted-foreground/60" : "bg-muted-foreground/25",
+                     activeDistance === 0
+                       ? "scale-x-100"
+                       : activeDistance === 1
+@@ -242,7 +242,7 @@ export function TimelineMinimap({
+                   }}
+                   style={{ top }}
+                 >
+-                  <span className="absolute inset-0 rounded-full bg-foreground/90 opacity-0 transition-opacity duration-150 group-data-[in-view=true]/strip:opacity-100" />
++                  <span className="absolute inset-0 rounded-full bg-foreground/55 opacity-0 transition-opacity duration-150 group-data-[in-view=true]/strip:opacity-100" />
+                 </span>
+               );
+             })}
+diff --git a/apps/web/src/components/chat/TraitsPicker.tsx b/apps/web/src/components/chat/TraitsPicker.tsx
+index 8d46f4399f76..68580c39a1e3 100644
+--- a/apps/web/src/components/chat/TraitsPicker.tsx
++++ b/apps/web/src/components/chat/TraitsPicker.tsx
+@@ -24,7 +24,7 @@ import {
+   normalizeModelSlug,
+ } from "@t3tools/shared/model";
+ import { memo } from "react";
+-import { BrainIcon } from "lucide-react";
++import { GaugeIcon } from "lucide-react";
+ import {
+   Menu,
+   MenuGroup,
+@@ -600,7 +600,7 @@ export const TraitsPicker = memo(function TraitsPicker({
+                 size === "xs" ? "gap-1" : "gap-1.5",
+               )}
+             >
+-              <ComposerControlIcon icon={BrainIcon} size={size} />
++              <ComposerControlIcon icon={GaugeIcon} size={size} />
+               <span data-composer-control-label className="min-w-0 truncate">
+                 {triggerLabel}
+               </span>
+@@ -608,7 +608,7 @@ export const TraitsPicker = memo(function TraitsPicker({
+             </span>
+           ) : (
+             <>
+-              <ComposerControlIcon icon={BrainIcon} size={size} />
++              <ComposerControlIcon icon={GaugeIcon} size={size} />
+               <span data-composer-control-label>{triggerLabel}</span>
+               <ComposerControlChevron size={size} />
+             </>
+diff --git a/apps/web/src/components/chat/threadDetailsPanelStyles.ts b/apps/web/src/components/chat/threadDetailsPanelStyles.ts
+index 11c599ec42c6..a666427982f3 100644
+--- a/apps/web/src/components/chat/threadDetailsPanelStyles.ts
++++ b/apps/web/src/components/chat/threadDetailsPanelStyles.ts
+@@ -19,7 +19,7 @@ const THREAD_DETAILS_PANEL_CONTROL_CLASS = `h-8 min-w-0 rounded-lg border-transp
+ 
+ export const THREAD_DETAILS_PANEL_ROW_CLASS = `${THREAD_DETAILS_PANEL_CONTROL_CLASS} w-full justify-start ${THREAD_DETAILS_PANEL_ROW_SURFACE_CLASS}`;
+ 
+-export const THREAD_DETAILS_PANEL_SELECT_ROW_CLASS = `${THREAD_DETAILS_PANEL_ROW_CLASS} gap-0 px-0 [&_[data-slot=select-icon]]:-me-px [&_[data-slot=select-icon]]:relative [&_[data-slot=select-icon]]:flex [&_[data-slot=select-icon]]:h-full [&_[data-slot=select-icon]]:w-8 [&_[data-slot=select-icon]]:shrink-0 [&_[data-slot=select-icon]]:items-center [&_[data-slot=select-icon]]:justify-center [&_[data-slot=select-icon]]:before:absolute [&_[data-slot=select-icon]]:before:-left-px [&_[data-slot=select-icon]]:before:top-1/2 [&_[data-slot=select-icon]]:before:h-4 [&_[data-slot=select-icon]]:before:w-px [&_[data-slot=select-icon]]:before:-translate-y-1/2 [&_[data-slot=select-icon]]:before:bg-border/65 [&_[data-slot=select-icon]>svg]:me-0 [&_[data-slot=select-icon]>svg]:size-4 [&_[data-slot=select-icon]>svg]:text-muted-foreground [&_[data-slot=select-icon]>svg]:opacity-100`;
++export const THREAD_DETAILS_PANEL_SELECT_ROW_CLASS = `${THREAD_DETAILS_PANEL_ROW_CLASS} gap-0 px-0 [&_[data-slot=select-icon]]:-me-px [&_[data-slot=select-icon]]:relative [&_[data-slot=select-icon]]:flex [&_[data-slot=select-icon]]:h-full [&_[data-slot=select-icon]]:w-8 [&_[data-slot=select-icon]]:shrink-0 [&_[data-slot=select-icon]]:items-center [&_[data-slot=select-icon]]:justify-center [&_[data-slot=select-icon]]:before:absolute [&_[data-slot=select-icon]]:before:-left-px [&_[data-slot=select-icon]]:before:top-1/2 [&_[data-slot=select-icon]]:before:h-4 [&_[data-slot=select-icon]]:before:w-px [&_[data-slot=select-icon]]:before:-translate-y-1/2 [&_[data-slot=select-icon]]:before:bg-transparent hover:[&_[data-slot=select-icon]]:before:bg-border/65 data-popup-open:[&_[data-slot=select-icon]]:before:bg-border/65 [&_[data-slot=select-icon]>svg]:me-0 [&_[data-slot=select-icon]>svg]:size-4 [&_[data-slot=select-icon]>svg]:text-muted-foreground [&_[data-slot=select-icon]>svg]:opacity-100`;
+ 
+ // The row keeps its soft fill while each half stacks a second one, like the split controls nearby.
+ export const THREAD_DETAILS_PANEL_SELECT_LABEL_CLASS = `flex h-full min-w-0 flex-1 items-center rounded-s-lg ${THREAD_DETAILS_PANEL_ROW_CONTENT_CLASS} ${THREAD_DETAILS_PANEL_HALF_HOVER_SURFACE_CLASS}`;
+@@ -36,10 +36,12 @@ export const THREAD_DETAILS_PANEL_ICON_ACTION_CLASS = `size-6 justify-center rou
+ 
+ export const THREAD_DETAILS_PANEL_META_ACTION_CLASS = `h-6 gap-1 rounded-md border-transparent px-1.5 text-xs font-medium text-muted-foreground ${THREAD_DETAILS_PANEL_ROW_SURFACE_CLASS}`;
+ 
+-export const THREAD_DETAILS_PANEL_SPLIT_GROUP_CLASS = `flex w-full items-center rounded-lg ${THREAD_DETAILS_PANEL_SPLIT_GROUP_SURFACE_CLASS}`;
++export const THREAD_DETAILS_PANEL_SPLIT_GROUP_CLASS = `group/details-split flex w-full items-center rounded-lg ${THREAD_DETAILS_PANEL_SPLIT_GROUP_SURFACE_CLASS}`;
+ 
+ export const THREAD_DETAILS_PANEL_SPLIT_PRIMARY_CLASS = `${THREAD_DETAILS_PANEL_CONTROL_CLASS} flex-1 justify-start rounded-e-none ${THREAD_DETAILS_PANEL_SPLIT_BUTTON_SURFACE_CLASS}`;
+ 
+ export const THREAD_DETAILS_PANEL_SPLIT_SECONDARY_CLASS = `${THREAD_DETAILS_PANEL_CONTROL_CLASS} w-8 justify-center rounded-s-none px-0 ${THREAD_DETAILS_PANEL_SPLIT_BUTTON_SURFACE_CLASS}`;
+ 
+-export const THREAD_DETAILS_PANEL_SPLIT_SEPARATOR_CLASS = "h-4 w-px shrink-0 bg-border/65";
++// The split hairline shows only while the pair is in use, so resting rows read as plain rows.
++export const THREAD_DETAILS_PANEL_SPLIT_SEPARATOR_CLASS =
++  "h-4 w-px shrink-0 bg-transparent group-hover/details-split:bg-border/65 group-has-[[data-popup-open]]/details-split:bg-border/65";
+diff --git a/apps/web/src/components/preview/AgentBrowserCursor.tsx b/apps/web/src/components/preview/AgentBrowserCursor.tsx
+index 8316d98e54d0..bbe890d4d5df 100644
+--- a/apps/web/src/components/preview/AgentBrowserCursor.tsx
++++ b/apps/web/src/components/preview/AgentBrowserCursor.tsx
+@@ -87,10 +87,7 @@ export function AgentCursorMark(props: {
+           className="absolute left-0.5 top-0.5 size-4 animate-status-ping rounded-full bg-primary/25 motion-reduce:animate-none"
+         />
+       ) : null}
+-      <MousePointer2
+-        className="relative size-5 -translate-x-0.5 -translate-y-0.5 fill-background text-primary drop-shadow-sm"
+-        strokeWidth={2}
+-      />
++      <MousePointer2 className="relative size-5 -translate-x-0.5 -translate-y-0.5 fill-background stroke-2 text-primary drop-shadow-sm" />
+     </div>
+   );
+ }
+diff --git a/apps/web/src/components/pullRequest/PullRequestChecksPopover.tsx b/apps/web/src/components/pullRequest/PullRequestChecksPopover.tsx
+index d4fb66dad026..2b43d1262e90 100644
+--- a/apps/web/src/components/pullRequest/PullRequestChecksPopover.tsx
++++ b/apps/web/src/components/pullRequest/PullRequestChecksPopover.tsx
+@@ -181,7 +181,7 @@ export function PullRequestChecksPopover({
+           <>
+             {checks !== undefined && incompleteCount > 0 ? (
+               <span className="tabular-nums">
+-                {checks.length - incompleteCount}/{checks.length}
++                {checks.length - incompleteCount}/{checks.length} checks
+               </span>
+             ) : failedCount > 0 ? (
+               <span className="tabular-nums">{failedCount} failed</span>
+diff --git a/apps/web/src/components/settings/AppearanceSettingsPanel.tsx b/apps/web/src/components/settings/AppearanceSettingsPanel.tsx
+index a13bc93bb9ce..a7b0756f6446 100644
+--- a/apps/web/src/components/settings/AppearanceSettingsPanel.tsx
++++ b/apps/web/src/components/settings/AppearanceSettingsPanel.tsx
+@@ -351,6 +351,32 @@ export function AppearanceSettingsPanel() {
+             </div>
+           }
+         />
++        <SettingsRow
++          {...searchableSetting("sidebar-project-icon-colors")}
++          description="Show project icons in the sidebar in full color instead of gray."
++          resetAction={
++            settings.sidebarProjectIconColors !==
++            DEFAULT_UNIFIED_SETTINGS.sidebarProjectIconColors ? (
++              <SettingResetButton
++                label="colored project icons"
++                onClick={() =>
++                  updateSettings({
++                    sidebarProjectIconColors: DEFAULT_UNIFIED_SETTINGS.sidebarProjectIconColors,
++                  })
++                }
++              />
++            ) : null
++          }
++          control={
++            <Switch
++              checked={settings.sidebarProjectIconColors}
++              onCheckedChange={(checked) =>
++                updateSettings({ sidebarProjectIconColors: Boolean(checked) })
++              }
++              aria-label="Colored project icons"
++            />
++          }
++        />
+         <SettingsRow
+           {...searchableSetting("math-rendering")}
+           description="Typeset LaTeX math, such as $x^2$ or \[x^2\], in messages and Markdown previews. The composer keeps TeX source editable."
+diff --git a/apps/web/src/components/settings/ProjectDefaultsSettings.tsx b/apps/web/src/components/settings/ProjectDefaultsSettings.tsx
+index 2828d141630a..89df79882ffd 100644
+--- a/apps/web/src/components/settings/ProjectDefaultsSettings.tsx
++++ b/apps/web/src/components/settings/ProjectDefaultsSettings.tsx
+@@ -148,14 +148,12 @@ export function ProjectDefaultsSettings({ category }: { category: ProjectSetting
+       description={
+         isProjectScope
+           ? "Model for new threads in this project."
+-          : "Default model for new threads. Projects can override it."
+-      }
+-      status={
+-        unavailable || mixedModel || modelSource === "project"
+-          ? undefined
+-          : settings.defaultModelSelection === null
+-            ? "Automatic"
+-            : undefined
++          : !unavailable &&
++              !mixedModel &&
++              modelSource !== "project" &&
++              settings.defaultModelSelection === null
++            ? "Default model for new threads, selected automatically. Projects can override it."
++            : "Default model for new threads. Projects can override it."
+       }
+       resetAction={
+         settings.defaultModelSelection !== null ? (
+diff --git a/apps/web/src/components/settings/SettingsFontPreviews.tsx b/apps/web/src/components/settings/SettingsFontPreviews.tsx
+index 2791d9c2a15e..ab97a1a341e0 100644
+--- a/apps/web/src/components/settings/SettingsFontPreviews.tsx
++++ b/apps/web/src/components/settings/SettingsFontPreviews.tsx
+@@ -5,7 +5,7 @@ import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "../Compos
+ import { EMPTY_COMPOSER_CONTEXT_RECORDS } from "../composerContextPresentation";
+ import { terminalThemeFromApp } from "../ThreadTerminalDrawer";
+ import { useRenderedAppearance, useTheme } from "../../hooks/useTheme";
+-import { DISCONNECTED_COMPOSER_PLACEHOLDER } from "../../composerPlaceholder";
++import { DEFAULT_COMPOSER_PLACEHOLDER } from "../../composerPlaceholder";
+ import { resolveDiffThemeName, type DiffThemeName } from "../../lib/diffRendering";
+ import { PREFERRED_HIGHLIGHTER } from "../../lib/syntaxHighlighting";
+ import { GhosttyTerminalSurface } from "~/terminal/ghostty/surface";
+@@ -39,7 +39,7 @@ export function PromptFontPreview() {
+         contextRecords={EMPTY_COMPOSER_CONTEXT_RECORDS}
+         skills={PREVIEW_SKILLS}
+         disabled={false}
+-        placeholder={DISCONNECTED_COMPOSER_PLACEHOLDER}
++        placeholder={DEFAULT_COMPOSER_PLACEHOLDER}
+         className="max-h-42 min-h-14"
+         onChange={onChange}
+         onPaste={noop}
+diff --git a/apps/web/src/components/settings/SettingsPanels.tsx b/apps/web/src/components/settings/SettingsPanels.tsx
+index adb29f178221..e0477eafa0ce 100644
+--- a/apps/web/src/components/settings/SettingsPanels.tsx
++++ b/apps/web/src/components/settings/SettingsPanels.tsx
+@@ -409,6 +409,9 @@ export function useSettingsRestore(onRestored?: () => void) {
+     ...(settings.mathRenderingEnabled !== DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled
+       ? ["Render math"]
+       : []),
++    ...(settings.sidebarProjectIconColors !== DEFAULT_UNIFIED_SETTINGS.sidebarProjectIconColors
++      ? ["Colored project icons"]
++      : []),
+     ...(settings.panelAnimationDurationMs !== DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs
+       ? ["Panel animations"]
+       : []),
+@@ -448,10 +451,10 @@ export function useSettingsRestore(onRestored?: () => void) {
+       ? ["Auto-settle merged threads"]
+       : []),
+     ...(settings.autoResumeLimitedThreads !== DEFAULT_UNIFIED_SETTINGS.autoResumeLimitedThreads
+-      ? ["Auto-resume limited threads"]
++      ? ["Resume after usage limits"]
+       : []),
+     ...(settings.snoozeLimitedThreads !== DEFAULT_UNIFIED_SETTINGS.snoozeLimitedThreads
+-      ? ["Snooze limited threads"]
++      ? ["Snooze until limits reset"]
+       : []),
+     ...(settings.wordWrap !== DEFAULT_UNIFIED_SETTINGS.wordWrap ? ["Word wrap"] : []),
+     ...(settings.persistComposerContextStrip !==
+@@ -582,6 +585,7 @@ export function useSettingsRestore(onRestored?: () => void) {
+       diffColorScheme: DEFAULT_UNIFIED_SETTINGS.diffColorScheme,
+       chatWidth: DEFAULT_UNIFIED_SETTINGS.chatWidth,
+       mathRenderingEnabled: DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled,
++      sidebarProjectIconColors: DEFAULT_UNIFIED_SETTINGS.sidebarProjectIconColors,
+       timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
+       notificationMode: DEFAULT_UNIFIED_SETTINGS.notificationMode,
+       inAppNotificationsEnabled: DEFAULT_UNIFIED_SETTINGS.inAppNotificationsEnabled,
+@@ -949,14 +953,14 @@ export function GeneralSettingsPanel() {
+               onCheckedChange={(checked) =>
+                 updateSettings({ autoResumeLimitedThreads: Boolean(checked) })
+               }
+-              aria-label="Auto-resume limited threads"
++              aria-label="Resume after usage limits"
+             />
+           }
+         />
+         <SettingsRow
+           serverScoped
+           {...searchableSetting("snooze-limited-threads")}
+-          description="Snooze usage-limit stops until the reported reset time. Combine with auto-resume to continue when they wake."
++          description="Snooze usage-limit stops until reset. Pair with resume to continue on wake."
+           settingKeys={["snoozeLimitedThreads"]}
+           control={
+             <ScopedSwitch
+@@ -965,7 +969,7 @@ export function GeneralSettingsPanel() {
+               onCheckedChange={(checked) =>
+                 updateSettings({ snoozeLimitedThreads: Boolean(checked) })
+               }
+-              aria-label="Snooze limited threads"
++              aria-label="Snooze until limits reset"
+             />
+           }
+         />
+diff --git a/apps/web/src/components/settings/SettingsScopeSentence.tsx b/apps/web/src/components/settings/SettingsScopeSentence.tsx
+index 200f09a8ec5f..76bf9b106c6e 100644
+--- a/apps/web/src/components/settings/SettingsScopeSentence.tsx
++++ b/apps/web/src/components/settings/SettingsScopeSentence.tsx
+@@ -7,7 +7,7 @@ import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
+ import { useEnvironments, type EnvironmentPresentation } from "../../state/environments";
+ import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
+ import { ProjectFavicon } from "../ProjectFavicon";
+-import { InlineButton } from "../ui/button";
++import { Button } from "../ui/button";
+ import {
+   Combobox,
+   ComboboxEmpty,
+@@ -69,7 +69,7 @@ export function SettingsScopeSentence() {
+     onChange: scope.selectScope,
+   };
+   return (
+-    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-base text-muted-foreground sm:px-4">
++    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-sm text-muted-foreground sm:px-4">
+       <span className="flex min-w-0 items-center gap-1.5">
+         <span className="shrink-0">Applying settings for</span>
+         <ProjectScopeMenu {...props} />
+@@ -133,12 +133,16 @@ function ScopeMenu({
+   const trigger = (
+     <Trigger
+       aria-label={`${ariaLabel}: ${label}`}
+-      render={<InlineButton tone="picker" />}
++      render={<Button variant="outline" size="sm" />}
+       className="min-w-0 max-w-72"
+     >
+       {icon}
+       <span className="min-w-0 truncate">{label}</span>
+-      <ChevronDownIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
++      <ChevronDownIcon
++        aria-hidden
++        strokeWidth={1.75}
++        className="-me-0.5 size-3.5 shrink-0 text-muted-foreground opacity-70"
++      />
+     </Trigger>
+   );
+   const choices = allOption ? [allOption, ...options] : options;
+diff --git a/apps/web/src/components/settings/SettingsSidebarNav.tsx b/apps/web/src/components/settings/SettingsSidebarNav.tsx
+index bd334fd916ef..981608d8d6d5 100644
+--- a/apps/web/src/components/settings/SettingsSidebarNav.tsx
++++ b/apps/web/src/components/settings/SettingsSidebarNav.tsx
+@@ -105,7 +105,7 @@ const SETTINGS_NAV_ITEMS: ReadonlyArray<{
+ 
+ function SettingsSectionIcon({ to }: { to: SettingsPath }) {
+   const Icon = SETTINGS_SECTION_ICONS[to];
+-  return <Icon className="size-3.5 h-5 shrink-0 text-sidebar-muted-foreground/60" />;
++  return <Icon className="size-4 shrink-0 text-(--sidebar-icon-color)" />;
+ }
+ 
+ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
+diff --git a/apps/web/src/components/settings/settingsLayout.tsx b/apps/web/src/components/settings/settingsLayout.tsx
+index 3d6abb71f3f6..edf723f37e47 100644
+--- a/apps/web/src/components/settings/settingsLayout.tsx
++++ b/apps/web/src/components/settings/settingsLayout.tsx
+@@ -183,7 +183,9 @@ export function SettingsSearchTarget({
+   );
+ }
+ 
+-export const SETTINGS_PICKER_TRIGGER_CLASSNAME = "min-w-0 max-w-none shrink-0";
++// Settings pickers reuse composer controls but match the bordered selects beside them.
++export const SETTINGS_PICKER_TRIGGER_CLASSNAME =
++  "min-w-0 max-w-none shrink-0 border-input bg-background font-normal text-foreground shadow-xs/5 hover:bg-accent/50 dark:bg-input/32 [&_svg[data-composer-control-chevron]]:stroke-[1.75] [&_svg[data-composer-control-chevron]]:opacity-70";
+ 
+ export function PolicyTooltip({ children }: { readonly children: string }) {
+   return (
+@@ -246,7 +248,7 @@ export function SettingsSection({
+           className="flex min-h-7 items-start justify-between gap-4 px-3 sm:px-4"
+         >
+           <div className="flex min-w-0 items-center gap-1">
+-            <h2 className="flex min-h-7 items-center gap-2 text-sm font-normal text-foreground/70">
++            <h2 className="flex min-h-7 items-center gap-2 text-base font-semibold text-foreground">
+               {icon}
+               {title}
+             </h2>
+@@ -473,7 +475,7 @@ export function SettingsRow({
+       tabIndex={rowProps.id ? -1 : rowProps.tabIndex}
+       data-slot="settings-row"
+       className={cn(
+-        "@container/settings-row rounded-xl px-3 sm:px-4 aria-disabled:opacity-64 aria-disabled:[&_*]:text-muted-foreground",
++        "group/settings-row @container/settings-row rounded-xl px-3 sm:px-4 aria-disabled:opacity-64 aria-disabled:[&_*]:text-muted-foreground",
+         children ? "pt-3 pb-1" : "py-3",
+         className,
+       )}
+@@ -483,7 +485,15 @@ export function SettingsRow({
+           <div className="flex min-h-5 items-center gap-1.5">
+             <h3 className="text-sm font-medium text-foreground">{title}</h3>
+             {renderedInheritance ? (
+-              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
++              <span
++                className={cn(
++                  "inline-flex h-5 w-5 shrink-0 items-center justify-center",
++                  // Values set right here explain nothing new, so their marker waits for hover or focus.
++                  (inheritance.state === "default" || inheritance.state === "environment") &&
++                    overridingProjects.length === 0 &&
++                    "opacity-0 group-hover/settings-row:opacity-100 has-focus-visible:opacity-100 has-data-popup-open:opacity-100",
++                )}
++              >
+                 {renderedInheritance}
+               </span>
+             ) : null}
+@@ -492,7 +502,7 @@ export function SettingsRow({
+             </span>
+           </div>
+           {description ? (
+-            <p className="max-w-xl text-xs leading-normal text-muted-foreground/80">
++            <p className="max-w-2xl text-balance text-xs leading-normal text-muted-foreground">
+               {description}
+             </p>
+           ) : null}
+diff --git a/apps/web/src/components/settings/settingsSearch.ts b/apps/web/src/components/settings/settingsSearch.ts
+index 000ae5d4742e..769dc7a447cb 100644
+--- a/apps/web/src/components/settings/settingsSearch.ts
++++ b/apps/web/src/components/settings/settingsSearch.ts
+@@ -263,6 +263,12 @@ export const SETTINGS_SEARCH_ITEMS = [
+     to: "/settings/appearance",
+     searchTerms: ["wide full width column layout messages composer monitor"],
+   },
++  {
++    id: "sidebar-project-icon-colors",
++    title: "Colored project icons",
++    to: "/settings/appearance",
++    searchTerms: ["sidebar favicon logo grayscale gray color"],
++  },
+   {
+     id: "math-rendering",
+     title: "Render math",
+@@ -337,13 +343,13 @@ export const SETTINGS_SEARCH_ITEMS = [
+   },
+   {
+     id: "snooze-limited-threads",
+-    title: "Snooze limited threads",
++    title: "Snooze until limits reset",
+     to: "/settings/general",
+     searchTerms: ["usage quota rate limit reset wake recover continue"],
+   },
+   {
+     id: "auto-resume-limited-threads",
+-    title: "Auto-resume limited threads",
++    title: "Resume after usage limits",
+     to: "/settings/general",
+     searchTerms: ["usage quota rate limit reset recover continue"],
+   },
+diff --git a/apps/web/src/components/sidebar/SidebarListMarkers.tsx b/apps/web/src/components/sidebar/SidebarListMarkers.tsx
+index 0bfee0f6bfa8..f70f8b92f942 100644
+--- a/apps/web/src/components/sidebar/SidebarListMarkers.tsx
++++ b/apps/web/src/components/sidebar/SidebarListMarkers.tsx
+@@ -102,6 +102,8 @@ export function SidebarDragBoundary(props: {
+ export function SidebarSectionHeader(props: {
+   marker: "working-header" | "snoozed-header" | "settled-header";
+   label: string;
++  /** Shown as a muted trailing count while the shelf is collapsed. */
++  count: number;
+   className?: string;
+   dragging?: boolean;
+   isDropTarget?: boolean;
+@@ -113,7 +115,6 @@ export function SidebarSectionHeader(props: {
+       : props.marker === "snoozed-header"
+         ? "snoozed"
+         : "settled";
+-  const snoozed = shelf === "snoozed";
+   return (
+     <SortableSidebarMarker
+       marker={props.marker}
+@@ -123,10 +124,13 @@ export function SidebarSectionHeader(props: {
+       <CollapsibleSectionHeader
+         onClick={props.toggle.onToggle}
+         expanded={props.toggle.expanded}
+-        tone={
+-          props.isDropTarget ? "accent" : props.dragging ? "emphasized" : snoozed ? "info" : "muted"
+-        }
++        tone={props.isDropTarget ? "accent" : props.dragging ? "emphasized" : "muted"}
+         data-testid={`sidebar-${shelf}-shelf-toggle`}
++        accessory={
++          props.toggle.expanded ? null : (
++            <span className="font-normal tabular-nums">{props.count}</span>
++          )
++        }
+       >
+         {props.label}
+       </CollapsibleSectionHeader>
+diff --git a/apps/web/src/components/sidebar/SidebarThreadRow.tsx b/apps/web/src/components/sidebar/SidebarThreadRow.tsx
+index 0227096adef2..f5ad695d975b 100644
+--- a/apps/web/src/components/sidebar/SidebarThreadRow.tsx
++++ b/apps/web/src/components/sidebar/SidebarThreadRow.tsx
+@@ -111,6 +111,7 @@ import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } f
+ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+ import { MiddleTruncate } from "../ui/middle-truncate";
+ import { useThreadHasUnsentDraft } from "../../composerDraftStore";
++import { useClientSettings } from "../../hooks/useSettings";
+ 
+ // The fields thread rows show. Provider status pushes refresh `checkedAt`,
+ // status and auth on every provider; leaving those out keeps each
+@@ -197,7 +198,7 @@ function SidebarProviderStack(props: {
+       acpRegistryIconUrl={currentEntry.acpRegistryIconUrl}
+       showBadge={showInstanceBadge}
+       size="compact"
+-      iconClassName="opacity-60"
++      iconClassName="opacity-50 grayscale"
+     />
+   );
+   if (stack.length === 1) {
+@@ -642,6 +643,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+     wokeAtDate !== null &&
+     (lastVisitedDate === null || lastVisitedDate < wokeAtDate) &&
+     thread.settledOverride !== "settled";
++  const projectIconColors = useClientSettings((s) => s.sidebarProjectIconColors);
+   const shouldRecede = shouldRecedeSidebarThread({
+     status,
+     isUnread,
+@@ -654,7 +656,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+       ? {
+           label: thread.goal?.status === "active" ? "Goal" : "Working",
+           icon: "working" as const,
+-          className: "text-info",
++          className: "text-info-foreground",
+         }
+       : status === "waiting"
+         ? {
+@@ -684,25 +686,25 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+                 ? {
+                     label: "Limited",
+                     icon: "failed" as const,
+-                    className: "text-warning",
++                    className: "text-warning-foreground",
+                   }
+                 : status === "failed"
+                   ? {
+                       label: "Failed",
+                       icon: "failed" as const,
+-                      className: "text-error",
++                      className: "text-error-foreground",
+                     }
+                   : isWoke
+                     ? {
+                         label: "Woke",
+                         icon: "woke" as const,
+-                        className: "text-warning",
++                        className: "text-warning-foreground",
+                       }
+                     : isUnread
+                       ? {
+                           label: "Done",
+                           icon: "done" as const,
+-                          className: "text-success",
++                          className: "text-success-foreground",
+                         }
+                       : null;
+   const isWokeStatus = topStatus?.icon === "woke";
+@@ -892,11 +894,13 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+ 
+   const rowSurfaceClassName = cn(
+     "group/sidebar-row relative w-full cursor-pointer overflow-hidden rounded-md text-left outline-none select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+-    variantAction === "unsettle" && "[&:not(:hover):not(:focus-within)_*]:text-secondary-label/70",
++    variantAction === "unsettle" &&
++      !props.isActive &&
++      "[&:not(:hover):not(:focus-within)_*]:text-secondary-label/70",
+     props.isActive
+-      ? "bg-sidebar-row-active text-sidebar-foreground"
++      ? "bg-sidebar-row-active text-sidebar-foreground light:shadow-xs light:ring-1 light:ring-inset light:ring-sidebar-border/70"
+       : isSelected || props.sweepAction !== null
+-        ? "bg-sidebar-row-selected text-sidebar-foreground"
++        ? "bg-sidebar-row-selected text-sidebar-foreground light:ring-1 light:ring-inset light:ring-sidebar-border/70"
+         : hasUnsentDraft
+           ? cn(draftSurfaceClassName, "text-sidebar-foreground")
+           : shouldRecede
+@@ -974,12 +978,12 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+             ? cn(
+                 "truncate",
+                 shouldRecede
+-                  ? "text-secondary-label"
++                  ? "text-foreground/75 group-hover/sidebar-row:text-foreground group-focus-visible/sidebar-row:text-foreground"
+                   : isUnread || isWoke || status === "input" || status === "request"
+                     ? "text-foreground"
+                     : status === "failed"
+                       ? "text-foreground/95"
+-                      : "text-foreground/90",
++                      : "text-foreground",
+               )
+             : cn(
+                 "truncate group-focus-within/sidebar-row:text-foreground group-hover/sidebar-row:text-foreground",
+@@ -1273,18 +1277,22 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+             <div className="flex h-5 min-w-0 items-center gap-1.5">
+               {draftIndicator}
+               {props.project ? (
+-                <ProjectFavicon project={props.project} className="size-4 shrink-0" />
++                <ProjectFavicon
++                  project={props.project}
++                  className={cn(
++                    "size-4 shrink-0",
++                    // Repeated brand colors outshout titles; color returns on the row in focus.
++                    !props.isActive &&
++                      !projectIconColors &&
++                      "opacity-60 grayscale group-focus-visible/sidebar-row:opacity-100 group-focus-visible/sidebar-row:grayscale-0 group-any-hover/sidebar-row:opacity-100 group-any-hover/sidebar-row:grayscale-0",
++                  )}
++                />
+               ) : null}
+               {/* Left of the status slot, the pin would slide when hover swaps the
+                 label for the wider row controls. */}
+               {pinIndicator}
+               {props.projectDisplayName ? (
+-                <span
+-                  className={cn(
+-                    "min-w-0 flex-1 truncate text-secondary-label text-xs",
+-                    shouldRecede ? "font-normal" : "font-medium",
+-                  )}
+-                >
++                <span className="min-w-0 flex-1 truncate text-secondary-label text-xs">
+                   {props.projectDisplayName}
+                 </span>
+               ) : (
+@@ -1304,7 +1312,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+                       isWokeStatus
+                         ? "pointer-events-auto"
+                         : "pointer-events-none group-has-[:focus-visible]/sidebar-status-slot:absolute group-has-[:focus-visible]/sidebar-status-slot:right-0 group-has-[:focus-visible]/sidebar-status-slot:opacity-0 group-any-hover/sidebar-row:absolute group-any-hover/sidebar-row:right-0 group-any-hover/sidebar-row:opacity-0",
+-                      "flex items-center self-center justify-self-end tabular-nums text-secondary-label transition-opacity",
++                      "flex items-center self-center justify-self-end tabular-nums text-secondary-label",
+                       snoozeMenuOpen && "pointer-events-none absolute right-0 opacity-0",
+                     )}
+                   >
+@@ -1375,7 +1383,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+                       className={cn(
+                         // Mouse clicks leave Settle focused; focus-within would pin controls over
+                         // the status label after the pointer leaves. Use focus-visible instead.
+-                        "pointer-events-none absolute inset-y-0 right-0 flex items-stretch opacity-0 transition-opacity has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100 group-any-hover/sidebar-row:pointer-events-auto group-any-hover/sidebar-row:static group-any-hover/sidebar-row:opacity-100",
++                        "pointer-events-none absolute inset-y-0 right-0 flex items-stretch opacity-0 has-[:focus-visible]:pointer-events-auto has-[:focus-visible]:static has-[:focus-visible]:opacity-100 group-any-hover/sidebar-row:pointer-events-auto group-any-hover/sidebar-row:static group-any-hover/sidebar-row:opacity-100",
+                         snoozeMenuOpen && "pointer-events-auto static opacity-100",
+                       )}
+                     >
+@@ -1441,7 +1449,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+               {thread.branch ? (
+                 <>
+                   <ThreadWorktreeIndicator thread={thread} />
+-                  <span className="flex min-w-0 flex-1 text-muted-foreground/40">
++                  <span className="flex min-w-0 flex-1">
+                     <MiddleTruncate value={thread.branch} showTitle={false} />
+                   </span>
+                 </>
+@@ -1450,11 +1458,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
+                   <EnvironmentMachineIcon
+                     aria-hidden
+                     kind={props.environmentMachine}
+-                    className="size-3 shrink-0 text-muted-foreground/40"
++                    className="size-3 shrink-0"
+                   />
+-                  <span className="min-w-0 flex-1 truncate text-muted-foreground/40">
+-                    {props.scratchMachineLabel}
+-                  </span>
++                  <span className="min-w-0 flex-1 truncate">{props.scratchMachineLabel}</span>
+                 </>
+               ) : (
+                 <span className="flex-1" />
+diff --git a/apps/web/src/components/ui/button.tsx b/apps/web/src/components/ui/button.tsx
+index e9861fdf57f3..803a6fa04b7e 100644
+--- a/apps/web/src/components/ui/button.tsx
++++ b/apps/web/src/components/ui/button.tsx
+@@ -106,7 +106,7 @@ const inlineButtonVariants = cva(
+         muted: "text-muted-foreground hover:text-foreground",
+         destructive: "text-destructive/80 hover:text-destructive",
+         picker:
+-          "gap-1.5 text-foreground underline decoration-foreground/30 decoration-dotted decoration-from-font underline-offset-4 hover:decoration-foreground hover:decoration-solid data-popup-open:decoration-foreground data-popup-open:decoration-solid",
++          "gap-1 text-foreground decoration-from-font underline-offset-4 hover:underline data-popup-open:underline",
+       },
+     },
+   },
+diff --git a/apps/web/src/components/ui/collapsible-section-header.tsx b/apps/web/src/components/ui/collapsible-section-header.tsx
+index 99063f64c9e6..14b0ad4465bc 100644
+--- a/apps/web/src/components/ui/collapsible-section-header.tsx
++++ b/apps/web/src/components/ui/collapsible-section-header.tsx
+@@ -3,8 +3,7 @@ import { ChevronDownIcon } from "lucide-react";
+ import { cn } from "../../lib/utils";
+ 
+ const tones = {
+-  muted: { label: "text-sidebar-muted-foreground/60", line: "bg-sidebar-border/60" },
+-  info: { label: "text-blue-600 dark:text-blue-400", line: "bg-blue-500/20 dark:bg-blue-400/15" },
++  muted: { label: "text-sidebar-muted-foreground", line: "bg-sidebar-border/50" },
+   emphasized: { label: "text-sidebar-foreground/80", line: "bg-sidebar-foreground/25" },
+   accent: { label: "text-primary", line: "bg-primary/50" },
+ } as const;
+@@ -15,12 +14,16 @@ export function CollapsibleSectionHeader({
+   tone = "muted",
+   variant = "default",
+   accessory,
++  icon,
+   ...buttonProps
+ }: Omit<ComponentProps<"button">, "className" | "style" | "aria-expanded"> & {
+   expanded: boolean;
+   tone?: keyof typeof tones;
+-  variant?: "default" | "panel";
++  /** `row` matches the thread details panel's plain rows instead of a ruled header. */
++  variant?: "default" | "panel" | "row";
+   accessory?: ReactNode;
++  /** Leading icon; `row` headers use it to sit on the panel's icon column. */
++  icon?: ReactNode;
+ }) {
+   return (
+     <button
+@@ -29,16 +32,38 @@ export function CollapsibleSectionHeader({
+       aria-expanded={expanded}
+       className={cn(
+         "flex h-8 w-full cursor-pointer items-center gap-2 rounded-md text-left text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/70",
+-        variant === "panel" ? "ps-2 pe-2.5" : "px-2",
+-        tones[tone].label,
++        variant === "row"
++          ? "gap-2.5 rounded-lg border border-transparent px-2.5 text-[13px] text-foreground/80 hover:bg-black/[0.035] dark:hover:bg-white/[0.08]"
++          : cn(variant === "panel" ? "ps-2 pe-2.5" : "px-2", tones[tone].label),
+       )}
+     >
+-      <span className="shrink-0">{children}</span>
+-      <span aria-hidden className={cn("h-px min-w-2 flex-1", tones[tone].line)} />
++      {icon}
++      <span
++        className={cn(
++          "shrink-0",
++          // Same cap-height trim as the panel's other row labels, so they share a baseline.
++          variant === "row" && "[text-box:trim-both_cap_alphabetic]",
++        )}
++      >
++        {children}
++      </span>
++      <span
++        aria-hidden
++        // A collapsed header with a trailing count drops its rule so it doesn't read as a leader.
++        className={cn(
++          "h-px min-w-2 flex-1",
++          variant !== "row" && tones[tone].line,
++          !expanded && accessory && "invisible",
++        )}
++      />
+       {accessory}
+       <ChevronDownIcon
+         aria-hidden
+-        className={cn("size-3 shrink-0 transition-transform", !expanded && "rotate-180")}
++        className={cn(
++          "shrink-0 transition-transform",
++          variant === "row" ? "size-4 text-muted-foreground" : "size-3",
++          !expanded && "-rotate-90",
++        )}
+       />
+     </button>
+   );
+diff --git a/apps/web/src/components/ui/menu.tsx b/apps/web/src/components/ui/menu.tsx
+index 10da89dbf971..287c871beb8b 100644
+--- a/apps/web/src/components/ui/menu.tsx
++++ b/apps/web/src/components/ui/menu.tsx
+@@ -197,7 +197,7 @@ function MenuCheckboxItem({
+               stroke="currentColor"
+               strokeLinecap="round"
+               strokeLinejoin="round"
+-              strokeWidth="2"
++              strokeWidth="1.75"
+               viewBox="0 0 24 24"
+               width="24"
+               xmlns="http://www.w3.org/2000/svg"
+diff --git a/apps/web/src/components/ui/middle-truncate.test.ts b/apps/web/src/components/ui/middle-truncate.test.ts
+new file mode 100644
+index 000000000000..5a83189265eb
+--- /dev/null
++++ b/apps/web/src/components/ui/middle-truncate.test.ts
+@@ -0,0 +1,29 @@
++import { describe, expect, it } from "vite-plus/test";
++
++import { splitForMiddleTruncate } from "./middle-truncate";
++
++describe("splitForMiddleTruncate", () => {
++  it("keeps a short last path segment whole", () => {
++    expect(splitForMiddleTruncate("feature/ui-polish")).toEqual({
++      head: "feature/",
++      tail: "ui-polish",
++    });
++  });
++
++  it("starts a long segment's tail on a word, not mid-word", () => {
++    expect(splitForMiddleTruncate("t3/clone-repo-to-other-machine")?.tail).toBe("machine");
++    expect(splitForMiddleTruncate("t3/investigate-release-build-times")?.tail).toBe("times");
++  });
++
++  it("falls back to an earlier word when the last one is too short", () => {
++    expect(splitForMiddleTruncate("t3/compare-long-featurenames-ab")?.tail).toBe("featurenames-ab");
++  });
++
++  it("keeps the fixed tail when no word break is near", () => {
++    expect(splitForMiddleTruncate("t3/abcdefghijklmnopqrstuvwxyz")?.tail).toBe("qrstuvwxyz");
++  });
++
++  it("respects an explicit tail length", () => {
++    expect(splitForMiddleTruncate("t3/clone-repo-to-other-machine", 6)?.tail).toBe("achine");
++  });
++});
+diff --git a/apps/web/src/components/ui/middle-truncate.tsx b/apps/web/src/components/ui/middle-truncate.tsx
+index fd1b43c20709..8283006f45c8 100644
+--- a/apps/web/src/components/ui/middle-truncate.tsx
++++ b/apps/web/src/components/ui/middle-truncate.tsx
+@@ -1,5 +1,6 @@
+-import type { ComponentProps } from "react";
++import { type ComponentProps, useLayoutEffect, useRef } from "react";
+ 
++import { observeResize } from "~/lib/observeResize";
+ import { cn } from "~/lib/utils";
+ 
+ export function MiddleTruncate({
+@@ -16,21 +17,34 @@ export function MiddleTruncate({
+   variant?: "default" | "cap-aligned";
+ }) {
+   const split = splitForMiddleTruncate(value, tail);
++  const headRef = useRef<HTMLSpanElement>(null);
++  const head = split?.head;
++  useLayoutEffect(() => {
++    const element = headRef.current;
++    // A new head can keep the same box size, so refit here, not only on resize.
++    if (!element || head === undefined) return;
++    fitHead(element);
++    return observeResize(element, () => fitHead(element));
++  }, [head]);
+   return (
+     <span
+       {...(showTitle ? { title: value } : {})}
+       className={cn(
+         "inline-flex min-w-0 max-w-full overflow-hidden whitespace-nowrap",
+         variant === "cap-aligned" &&
+-          "overflow-x-clip overflow-y-visible [&>span]:[text-box:trim-both_cap_alphabetic] [&>span]:overflow-x-clip [&>span]:overflow-y-visible",
++          // Padding keeps descenders inside the box, so the cut does not clip them.
++          "overflow-x-clip overflow-y-visible [&>span]:[text-box:trim-both_cap_alphabetic] [&>span]:-mb-1 [&>span]:pb-1 [&>span]:overflow-x-clip [&>span]:overflow-y-visible",
+         className,
+       )}
+       {...props}
+     >
+       {split ? (
+         <>
+-          <span className="min-w-0 truncate">{split.head}</span>
+-          <span className="shrink-0">{split.tail}</span>
++          {/* The tail carries the ellipsis so it sits flush; a CSS ellipsis leaves a ragged gap. */}
++          <span ref={headRef} className="peer min-w-0 overflow-hidden">
++            {split.head}
++          </span>
++          <span className="shrink-0 peer-data-overflow:before:content-['…']">{split.tail}</span>
+         </>
+       ) : (
+         <span className="min-w-0 truncate">{value}</span>
+@@ -39,8 +53,42 @@ export function MiddleTruncate({
+   );
+ }
+ 
++// An overflowing head is cut after its last whole character: clip the partial glyph
++// and slide the tail left over the slack. Neither changes layout, so the observed
++// size stays the true available width.
++
++function fitHead(head: HTMLElement) {
++  const text = head.firstChild;
++  const overflowing = head.scrollWidth > head.clientWidth && text instanceof Text;
++  head.toggleAttribute("data-overflow", overflowing);
++  let slack = 0;
++  if (overflowing) {
++    const range = document.createRange();
++    const left = head.getBoundingClientRect().left;
++    const widthTo = (end: number) => {
++      range.setStart(text, 0);
++      range.setEnd(text, end);
++      return range.getBoundingClientRect().right - left;
++    };
++    let fits = 0;
++    let over = text.length;
++    while (over - fits > 1) {
++      const mid = (fits + over) >> 1;
++      if (widthTo(mid) <= head.clientWidth) fits = mid;
++      else over = mid;
++    }
++    if (/[\uD800-\uDBFF]/.test(text.data[fits - 1] ?? "")) fits -= 1;
++    slack = Math.max(0, head.clientWidth - widthTo(fits));
++  }
++  head.style.clipPath = slack > 0 ? `inset(-0.25em ${slack}px -0.25em 0)` : "";
++  const tail = head.nextElementSibling;
++  if (tail instanceof HTMLElement) tail.style.translate = slack > 0 ? `-${slack}px 0` : "";
++}
++
+ const DEFAULT_TAIL = 10;
+ const MAX_SEGMENT_TAIL = 16;
++const MIN_WORD_TAIL = 4;
++const WORD_BREAK = /[-_./]/;
+ 
+ export function splitForMiddleTruncate(
+   value: string,
+@@ -57,6 +105,26 @@ export function splitForMiddleTruncate(
+     }
+   }
+   if (keep <= 0 || chars.length <= keep + 4) return null;
+-  const cut = chars.length - keep;
++  let cut = chars.length - keep;
++  // Start an automatic tail on a word ("machine", not "er-machine"). A shorter tail is
++  // preferred so the head stays readable; a longer one is the fallback.
++  if (tail === undefined && !WORD_BREAK.test(chars[cut - 1]!)) {
++    const startsWord = (index: number) => WORD_BREAK.test(chars[index - 1]!);
++    let snapped = -1;
++    for (let index = cut + 1; index <= chars.length - MIN_WORD_TAIL; index++) {
++      if (startsWord(index)) {
++        snapped = index;
++        break;
++      }
++    }
++    for (
++      let index = cut - 1;
++      snapped < 0 && index >= chars.length - MAX_SEGMENT_TAIL && index > 4;
++      index--
++    ) {
++      if (startsWord(index)) snapped = index;
++    }
++    if (snapped > 0) cut = snapped;
++  }
+   return { head: chars.slice(0, cut).join(""), tail: chars.slice(cut).join("") };
+ }
+diff --git a/apps/web/src/components/ui/select.tsx b/apps/web/src/components/ui/select.tsx
+index 64cbc4f1ca42..e28e4014d9a9 100644
+--- a/apps/web/src/components/ui/select.tsx
++++ b/apps/web/src/components/ui/select.tsx
+@@ -52,7 +52,7 @@ function SelectTrigger({
+     >
+       {children}
+       <SelectPrimitive.Icon data-slot="select-icon">
+-        {icon ?? <ChevronDownIcon className="-me-1 size-3 opacity-50" />}
++        {icon ?? <ChevronDownIcon className="-me-1 size-3.5 opacity-70" />}
+       </SelectPrimitive.Icon>
+     </SelectPrimitive.Trigger>
+   );
+@@ -77,7 +77,7 @@ function SelectButton({
+       children: (
+         <>
+           <span className="min-w-0 flex-1 truncate text-left">{children}</span>
+-          <ChevronDownIcon aria-hidden className="-me-1 size-3 shrink-0 opacity-50" />
++          <ChevronDownIcon aria-hidden className="-me-1 size-3.5 shrink-0 opacity-70" />
+         </>
+       ),
+     },
+diff --git a/apps/web/src/composerPlaceholder.ts b/apps/web/src/composerPlaceholder.ts
+index 4fa933c68d7d..9bce08d6a911 100644
+--- a/apps/web/src/composerPlaceholder.ts
++++ b/apps/web/src/composerPlaceholder.ts
+@@ -1,2 +1 @@
+-export const DISCONNECTED_COMPOSER_PLACEHOLDER =
+-  "Ask for changes, send follow-ups, or attach images";
++export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything. @ files, $ skills, / commands";
+diff --git a/apps/web/src/index.css b/apps/web/src/index.css
+index df5fede8b8d5..7142f65cc763 100644
+--- a/apps/web/src/index.css
++++ b/apps/web/src/index.css
+@@ -103,7 +103,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+   --sidebar-control-gap: 0.5rem;
+   --sidebar-icon-color: color-mix(
+     in srgb,
+-    var(--contrast-sidebar-muted-foreground) 60%,
++    var(--contrast-sidebar-muted-foreground) 85%,
+     var(--sidebar)
+   );
+   --sidebar-row-content-inset: 0.625rem;
+@@ -166,7 +166,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+    the variables and Settings -> Appearance can override them at runtime. The
+    default stacks are mirrored in `appearanceFonts.ts`. */
+ @theme {
+-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
++  --font-sans:
++    -apple-system, BlinkMacSystemFont, "Inter Variable", "Segoe UI", system-ui, sans-serif;
+   --font-mono:
+     ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+ }
+@@ -192,7 +193,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+   /* The composer's elevation: a soft drop pulled in under the surface, shared
+      by the composer, its context strip and attached banners. */
+-  --shadow-composer: 0 12px 28px -18px rgb(0 0 0 / 40%);
++  --shadow-composer: 0 1px 2px rgb(0 0 0 / 5%);
+   --shadow-composer-dark: 0 14px 32px -18px rgb(0 0 0 / 75%);
+   /* Overlap the lower toolbar backdrop by one pixel to cover the composer seam. */
+   --spacing-composer-seam: calc(var(--spacing) * 4 - 1px);
+@@ -1093,7 +1094,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+ 
+ :root {
+   color-scheme: light;
+-  --radius: 0.625rem;
++  --radius: 0.5rem;
+   --background: var(--color-zinc-25);
+   --app-chrome-background: var(--background);
+   --toolbar-background: var(--app-chrome-background);
+@@ -1103,11 +1104,11 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+   --toolbar-control-foreground: var(--foreground);
+   --toolbar-control-hover: var(--accent);
+   --surface-raised: color-mix(in srgb, var(--card) 20%, transparent);
+-  --foreground: var(--color-zinc-800);
++  --foreground: var(--color-zinc-900);
+   --card: var(--color-white);
+-  --card-foreground: var(--color-zinc-800);
++  --card-foreground: var(--color-zinc-900);
+   --popover: var(--color-white);
+-  --popover-foreground: var(--color-zinc-800);
++  --popover-foreground: var(--color-zinc-900);
+   --primary: oklch(0.488 0.217 264);
+   --primary-foreground: var(--color-white);
+   --secondary: var(--color-zinc-50);
+@@ -1117,7 +1118,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+   --placeholder: var(--muted-foreground);
+   --secondary-label: var(--muted-foreground);
+   --icon-muted: var(--muted-foreground);
+-  --message-surface: var(--accent);
++  /* One step past the accent, so a user turn stands off the near-white canvas. */
++  --message-surface: color-mix(in srgb, var(--color-zinc-200) 55%, var(--color-zinc-100));
+   --message-foreground: var(--foreground);
+   --message-action: var(--primary);
+   --message-action-foreground: var(--primary-foreground);
+@@ -1180,15 +1182,16 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+     --secondary: --alpha(var(--color-white) / 3%);
+     --secondary-foreground: var(--color-neutral-100);
+     --muted: --alpha(var(--color-white) / 3%);
+-    --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
++    --muted-foreground: var(--color-neutral-400);
+     --accent: --alpha(var(--color-white) / 4%);
+     --accent-foreground: var(--color-neutral-100);
++    --message-surface: var(--accent);
+     --error: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
+     --error-foreground: var(--color-red-400);
+     --tool-error-icon: #fca5a5;
+     --error-surface: color-mix(in srgb, var(--error) 16%, transparent);
+-    --border: --alpha(var(--color-white) / 6%);
+-    --input: --alpha(var(--color-white) / 8%);
++    --border: --alpha(var(--color-white) / 8%);
++    --input: --alpha(var(--color-white) / 11%);
+     --info-foreground: var(--color-blue-400);
+     --guest-foreground: var(--color-fuchsia-300);
+     --success-foreground: var(--color-emerald-400);
+@@ -1212,9 +1215,9 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+    surfaces. */
+ [data-app-sidebar] {
+   --background: var(--color-zinc-25);
+-  --foreground: var(--color-zinc-800);
++  --foreground: var(--color-zinc-900);
+   --card: var(--color-white);
+-  --card-foreground: var(--color-zinc-800);
++  --card-foreground: var(--color-zinc-900);
+   --accent: var(--color-zinc-100);
+   --accent-foreground: var(--color-zinc-900);
+   --muted: var(--color-zinc-50);
+@@ -1222,7 +1225,7 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+   --border: var(--color-zinc-200);
+   --input: var(--color-zinc-300);
+   --sidebar: var(--color-zinc-50);
+-  --sidebar-foreground: var(--color-zinc-800);
++  --sidebar-foreground: var(--color-zinc-900);
+   --sidebar-muted-foreground: var(--color-zinc-500);
+   --sidebar-control-surface: var(--color-zinc-100);
+   --sidebar-row-hover: var(--color-zinc-25);
+@@ -1240,6 +1243,8 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
+     --accent-foreground: #f7f9ff;
+     --muted: #0a0a0a;
+     --muted-foreground: #a3a3a3;
++    /* Row metadata sits a step below read titles (75% white). */
++    --secondary-label: #8f8f8f;
+     --border: rgb(255 255 255 / 8%);
+     --input: rgb(255 255 255 / 18%);
+     --sidebar: var(--card);
+@@ -1658,6 +1663,12 @@ body {
+   padding: 0;
+ }
+ 
++/* Lighter default icon stroke. Zero specificity, so stroke-* classes still win
++   over it while it still beats lucide's stroke-width="2" attribute. */
++:where(svg.lucide[stroke-width="2"]) {
++  stroke-width: 1.75;
++}
++
+ html,
+ body {
+   min-height: calc(100svh + env(safe-area-inset-top));
+@@ -2048,21 +2059,25 @@ code {
+ }
+ 
+ .chat-markdown :not(pre) > code {
+-  border: 1px solid var(--contrast-border);
+-  border-radius: 0.375rem;
++  border: 1px solid transparent;
++  border-radius: 0.25rem;
+   box-decoration-break: clone;
+   -webkit-box-decoration-break: clone;
+-  background: var(--muted);
+-  padding: 0.1rem 0.35rem;
++  background: color-mix(in srgb, var(--contrast-foreground) 10%, transparent);
++  padding: 0.1em 0.35em;
+   color: var(--contrast-foreground);
+-  font-size: 0.75rem;
++  font-size: 0.85em;
++}
++
++.chat-markdown strong {
++  font-weight: 600;
+ }
+ 
+ .chat-markdown pre {
+   max-width: 100%;
+   overflow-x: auto;
+   border: 1px solid var(--contrast-border);
+-  border-radius: 0.75rem;
++  border-radius: 0.5rem;
+   background: var(--muted);
+   padding: 0.8rem 0.9rem;
+   scrollbar-width: thin;
+@@ -2203,8 +2218,8 @@ code {
+ :root {
+   --diff-addition: var(--success);
+   --diff-deletion: var(--destructive);
+-  --diff-addition-foreground: light-dark(var(--color-emerald-600), var(--color-emerald-400));
+-  --diff-deletion-foreground: light-dark(var(--color-red-600), var(--color-red-400));
++  --diff-addition-foreground: light-dark(var(--color-emerald-700), var(--color-emerald-400));
++  --diff-deletion-foreground: light-dark(var(--color-red-700), var(--color-red-400));
+ }
+ 
+ /* Chat width setting. Comfortable keeps the default --chat-content-max-width,
+diff --git a/apps/web/src/main.tsx b/apps/web/src/main.tsx
+index 3fe1f61bd728..48a1f7a2f164 100644
+--- a/apps/web/src/main.tsx
++++ b/apps/web/src/main.tsx
+@@ -2,6 +2,7 @@ import React from "react";
+ import ReactDOM from "react-dom/client";
+ import { createHashHistory, createBrowserHistory } from "@tanstack/react-router";
+ 
++import "@fontsource-variable/inter";
+ import "./index.css";
+ 
+ import { prepareProviderAuthDelivery } from "./providerAuthDelivery";
+diff --git a/docs/user/thread-sidebar.md b/docs/user/thread-sidebar.md
+index 560f7dd75844..6e42704ee8ed 100644
+--- a/docs/user/thread-sidebar.md
++++ b/docs/user/thread-sidebar.md
+@@ -215,8 +215,8 @@ Queued messages stay saved while the limit blocks the thread. They run after
+ the continuation finishes. If the queue was held by a restart, resume it then.
+ 
+ When the provider reports a reset time, choose **Resume at reset** to schedule a
+-continuation. You can cancel it from the thread. Enable **Auto-resume limited
+-threads** in **Settings → General** on web and desktop, or **Settings → Thread
++continuation. You can cancel it from the thread. Enable **Resume after
++usage limits** in **Settings → General** on web and desktop, or **Settings → Thread
+ behavior** on mobile, to schedule limit stops by default.
+ The environment must be running when the reset arrives; it resumes overdue
+ continuations after a restart. Stopping the thread, sending a new message,
+@@ -225,7 +225,7 @@ archiving, or settling it prevents a pending continuation from starting.
+ Choose **Snooze until reset** to hide the thread until its allowance returns.
+ Snooze and auto-resume are independent: snooze alone wakes the thread without
+ sending a message; enabling both wakes and continues it. **Wake now** cancels
+-the snooze. Enable **Snooze limited threads** in thread behavior settings to
++the snooze. Enable **Snooze until limits reset** in thread behavior settings to
+ snooze limit stops by default. Providers without a reset time offer manual
+ retry and the normal snooze choices.
+ 
+diff --git a/packages/contracts/src/settings.ts b/packages/contracts/src/settings.ts
+index e47ea801f3ee..7ebdf72310c3 100644
+--- a/packages/contracts/src/settings.ts
++++ b/packages/contracts/src/settings.ts
+@@ -475,6 +475,8 @@ export const ClientSettingsSchema = Schema.Struct({
+   // Opt-in TeX typesetting in rendered Markdown. Off keeps math parsing and
+   // KaTeX out of the render path entirely.
+   mathRenderingEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
++  // Sidebar project icons rest in grayscale so titles lead; this keeps their colors.
++  sidebarProjectIconColors: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+ });
+ export type ClientSettings = typeof ClientSettingsSchema.Type;
+ 
+@@ -1680,5 +1682,6 @@ export const ClientSettingsPatch = Schema.Struct({
+   snapShotAnimations: Schema.optionalKey(Schema.Boolean),
+   wordWrap: Schema.optionalKey(Schema.Boolean),
+   mathRenderingEnabled: Schema.optionalKey(Schema.Boolean),
++  sidebarProjectIconColors: Schema.optionalKey(Schema.Boolean),
+ });
+ export type ClientSettingsPatch = typeof ClientSettingsPatch.Type;
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 5a0ef250c528..94bc7ad3c323 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -1012,6 +1012,9 @@ importers:
+       '@effect/atom-react':
+         specifier: 4.0.5
+         version: 4.0.5(effect@4.0.5)(react@19.3.0)(scheduler@0.28.0)
++      '@fontsource-variable/inter':
++        specifier: ^5.3.0
++        version: 5.3.0
+       '@formkit/auto-animate':
+         specifier: ^0.9.0
+         version: 0.9.0
+@@ -4183,6 +4186,9 @@ packages:
+   '@floating-ui/utils@0.2.11':
+     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+ 
++  '@fontsource-variable/inter@5.3.0':
++    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
++
+   '@formkit/auto-animate@0.9.0':
+     resolution: {integrity: sha512-VhP4zEAacXS3dfTpJpJ88QdLqMTcabMg0jwpOSxZ/VzfQVfl3GkZSCZThhGC5uhq/TxPHPzW0dzr4H9Bb1OgKA==}
+ 
+@@ -14473,6 +14479,8 @@ snapshots:
+ 
+   '@floating-ui/utils@0.2.11': {}
+ 
++  '@fontsource-variable/inter@5.3.0': {}
++
+   '@formkit/auto-animate@0.9.0': {}
+ 
+   '@hono/node-server@1.19.17(hono@4.13.7)':
