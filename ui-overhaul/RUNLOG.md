@@ -221,3 +221,17 @@ Run started: 2026-10-25 (local). Phase: 1 (audit + spec). Orchestrator: Claude F
 - Local absolute paths scrubbed from every text file under ui-overhaul/ (`<repo>` / `<home>`).
 - Left running on purpose for Phase 2: web dev runner PID 95734 (home /tmp/t3code-overhaul, ports 13773/5733) and desktop dev runner PID 75061 (home /tmp/t3code-overhaul-desktop, CDP 9222). Playwright tooling in /tmp/t3code-pw (shared session label `shared-playwright-do-not-revoke`). Never touched ~/.t3/userdata.
 - Hard stops: HS-001 only. Nothing was opened on pingdotgg/t3code (no PR, issue, discussion or comment). Phase 2 not started.
+
+## Phase 2 (started 2026-10-25 on user instruction "Go ahead and execute")
+
+- Constraints from the user: no Sonnet-or-higher subagents, avoid subagents, clean code. All work done directly by the orchestrator (Opus 5.5).
+- #24865 still OPEN, so per decision 2 only wave-0 chunks run, from upstream main d414cb5103 in worktree ../t3code-p2. Nothing opened on pingdotgg/t3code; PRs target the fork's main only, and issue numbers are written as plain text so no upstream backlinks are created.
+- Batch 1 (5 PRs, one problem each, each with a browser regression test that fails on main):
+  - AatmanAJ/t3code#1 P-01-1 sidebar stays collapsed after reload (F-01-01)
+  - AatmanAJ/t3code#2 O-3 bare /new redirects to the new-thread view (F-10-04)
+  - AatmanAJ/t3code#3 S-4 code/table copy without the Clipboard API (F-03-11, F-12-24)
+  - AatmanAJ/t3code#4 P-07-1 Esc closes the theme editor, not Settings (F-07-01, F-07-02)
+  - AatmanAJ/t3code#5 E-12 Esc keeps typed Settings text (F-08-08)
+- Incident HS-002: a zsh word-splitting bug in a push loop created a local branch named after the base SHA, and fork main was pushed to the batch commits. Restored within minutes with --force-with-lease to upstream main d414cb5103 (only my own push undone). No other branch affected.
+- Tooling: installed Playwright's pinned chromium-headless-shell into the user cache (not a repo dependency) so browser tests can run.
+- Not done per chunk: before/after screenshots (required before any upstream submission).
