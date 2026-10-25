@@ -1,7 +1,7 @@
 # T3 Code UI codebase map (for the UI/UX audit)
 
 Upstream pingdotgg/t3code `main` at 5f64c5eb. Read-only survey; nothing was run. All paths are relative to the
-repo root (`/Users/lives/.t3/scratch/2026-10-25-t3-code-ui-ux-overhaul-d1d61898/t3code`). `Lnnn` are line numbers at
+repo root (`<repo>`). `Lnnn` are line numbers at
 this commit. "web" = `apps/web`, "ui" = `apps/web/src/components/ui`.
 
 ## 0. Ten-line orientation
@@ -550,3 +550,12 @@ UI-relevant on web: no-manual-memo, no-hookless-use-function, no-outset-state-in
 - Counts of "unique icons" and import statements come from a regex over `import {...} from "lucide-react"` (multi-line aware) and may miss namespace/default imports; size-token counts are class-token occurrences across all `.tsx`, not icons only.
 - No tray exists in `apps/desktop/src` (searched for `Tray`); if the audit expects one, it is a gap, not an oversight in the map.
 - The RUNLOG.md decision D-004 notes AGENTS.md discourages browser verification without agreement; this map respected the "no dev server, no checks" instruction.
+
+## Corrections from the post-audit follow-up sweep (2026-10-25)
+
+### MAP.md
+
+```text
+MAP.md:350 (cookie row): "open/closed, written on every toggle with a 7-day max-age, never read back (F-01-01)".
+MAP.md:388: "`DEFAULT_KEYBINDINGS` (66 source entries, 82 rules once the two `.map()` blocks over the 9 thread-jump and 9 model-jump commands expand; L147-234; ...)".
+```

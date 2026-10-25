@@ -707,3 +707,52 @@ Each item is a place where the implementation contradicts its own system. "Resto
 - Geometry: `locator.boundingBox()` and `getComputedStyle` on `[data-thread-item]`, `[data-chat-header]`, `[data-thread-details-card]`, `[data-slot=menu-popup]`, `[data-settings-page-scroll]` and others, at 1440x900 with `colorScheme` light and dark.
 - Class counts: a script tokenising every non-test `.ts`/`.tsx` under `apps/web/src/components` (792 files) on whitespace/quotes/braces, stripping variant prefixes for the base counts (`sm:text-sm` counts as `text-sm`; unprefixed counts are quoted where it matters). `apps/web/src` as a whole (1,163 files) gives nearly identical shares.
 - The helper scripts live in `/tmp/t3code-pw/dna/` (outside the repo) and were not committed.
+
+## Corrections from the post-audit follow-up sweep (2026-10-25)
+
+The rules below supersede the earlier text where they conflict. Source: audit/_FOLLOWUPS.md §"Proposed DNA.md and DOCS-DIGEST.md corrections". Measured by areas 18 and 19; the radius change applies after PR #24865 merges.
+
+### DNA.md section 7.1: replace the "One-shot transitions" popover, dialog and toast bullets, add MorphIcon, fix the reduced-motion bullet
+
+Replace the three bullets "Popovers/menus", "Dialogs" and "Toasts" with:
+
+```text
+- Popovers, tooltips, comboboxes and autocomplete lists: scale 0.98 plus opacity at the Tailwind default 150ms ease (`popover.tsx:90`, `tooltip.tsx:140`, `combobox.tsx:167`, `autocomplete.tsx:105`); popover and tooltip also list `width,height` in `transition-[...]` so a popup can resize between triggers. Menus (`menu.tsx`) and selects (`select.tsx`) do not animate at all: measured 0 transitions and opacity 1 on the first frame (F-19-05).
+- Dialogs: 200ms `ease-in-out` scale/opacity/translate, backdrop `transition-all duration-200` (`dialog-styles.ts:2,5`). Route modals (Settings, Usage): scale 0.985 plus opacity over 150ms `ease-out` on close only; there is no enter, because `AppRouteModal` mounts with `open=true` so Base UI never plays the starting style (`AppRouteModal.tsx:17,55`; F-19-01). Neither is gated by the Panel animations setting.
+- Toasts: stacked toast transform .5s `cubic-bezier(.22,1,.36,1)`, opacity .5s, height .15s, inner content opacity .25s (`toast.tsx:568,644`); anchored toast scale plus opacity at 150ms (`toast.tsx:706`).
+- Icon morphs: `MorphIcon` (about 45 sites: copy checks, chevrons, panel toggle, send and queue) animates with a rAF-driven spring, default "snappy" (stiffness 420, damping 30), about 3.5% overshoot and a 2% settle near 270ms, `reducedMotion="user"` (`MorphIcon.tsx:3`; F-19-07). It is the one motion that is not a CSS transition.
+```
+
+Replace the last bullet "Reduced motion: ..." with:
+
+```text
+- Reduced motion: 25 files carry `motion-reduce:` (36 uses) and 21 `motion-safe:` uses; there is no global `prefers-reduced-motion` rule (only `.no-transitions`, `index.css:1086-1092`). Dialogs, popovers, tooltips, the command palette, toasts, the send-button hover scale and the button press scale have no reduced-motion branch and animate identically under `reduce` (measured, F-19-02). Under `reduce` the Spinner and Working dots become static glyphs (`motion-safe:` only); DNA-M9 is satisfied by `role="status"` text, and an opacity-only stepped pulse is the proposed liveness cue (F-19-02).
+```
+
+DNA-M4 addendum (append one sentence): "Overlays currently ease in-out in both directions (`dialog-styles.ts:2,5`); the ladder's `ease-out` in, `ease-in` out is the target (F-19-04)."
+
+### DNA.md section 4 (shape): DNA-S1 and the values that quote it (apply after #24865)
+
+Replace DNA-S1:
+
+```text
+- **DNA-S1 Radius is a ladder with roles: 4 / 6 / 8 / 12 / 16 / pill.** One variable, `--radius: 0.5rem`, drives `rounded-sm` 4 (menu, select and palette rows, kbd, inline code, `Button micro`), `rounded-md` 6 (tooltips, chips, file chips, anchored toasts, rows inside popups), `rounded-lg` 8 (buttons and other controls through `--control-radius`, inputs, selects, popovers, menus, code blocks, details-card rows, sidebar rows and sidebar search), `rounded-xl` 12 (grouped settings cards, theme cards), `rounded-2xl` 16 (dialogs, the command palette, route modals, the composer and the provider-subagent bar that replaces it, the Thread details card, the plan card, the user bubble) and `rounded-full` (pills, round buttons). `rounded-3xl` (20) is retired. `--control-radius` is `var(--radius-lg)`, not a literal, so it moves with the ladder; sidebar rows and sidebar search use `rounded-(--control-radius)` rather than `rounded-md` so they stay 8 (F-18-03, DNA-K1). A new surface takes the radius of the role it plays; it does not invent 10px, 14px or 18px.
+```
+
+Section 4.1: set the base line to "`--radius: 0.5rem` (`index.css:1096`), mapped at `index.css:284-289`" and the token column to `rounded-sm` 4, `rounded-md` 6, `rounded-lg` 8, `rounded-xl` 12, `rounded-2xl` 16, `rounded-3xl` 20 (retired; `GuestPage.tsx:666` only until F-18-06 lands). Section 4.4: "`rounded-3xl` (22px)" becomes "`rounded-2xl` (16px)" for the Thread details card and "22px radius" becomes "16px radius" for the composer. DNA-ID2: "(22px radius)" twice becomes "(16px radius)" and "radius ladder 6-8-10-18-22" becomes "radius ladder 4-6-8-12-16". Until #24865 merges, main keeps 6-8-10-14-18-22 and the old text is correct.
+
+### DNA.md: smaller corrections
+
+```text
+DNA-C3 (append): Direction of the step depends on the palette. Light themes and the hand-tuned default dark and T3 Chat dark put the sidebar one step darker than the canvas (`#fafafa` on `#fcfcfc`; `#000` on `#0a0a0a`). Every generated dark palette (Grove, Ocean, Ember, Iris, environment themes, the theme editor, VS Code import) does the opposite: `createVividThemeColors` sets the sidebar +0.045 OKLCH lightness above the canvas (`themePalette.ts:638-641,664`), for example 0.31 on 0.26 in Grove dark.
+
+DNA 10.1 (Sidebar bullet): replace "remembered in a `sidebar_state` cookie for 7 days (`ui/sidebar.tsx:25-26`)" with "written to a `sidebar_state` cookie on every toggle (`ui/sidebar.tsx:127-133`) but never read back, so it resets on reload (F-01-01), and the write throws on non-secure origins (F-01-07)".
+
+DNA-D2 (append): Button heights above the 32/28/24/20 set exist but have no sampled caller: `lg` 36 and `xl` 40 at 640px and wider (40 and 44 below), `icon-lg` 36 and `icon-xl` 40 (`button.tsx:19-47`).
+
+DNA-D3 (append, optional): floating route-modal headers (Settings, Usage) are 48px (`h-12`, `routes/_chat.settings.tsx:121`); only full-bleed mode must clear the native 52px strip.
+
+DNA-V1a (add under DNA-V1): Destination names in running text. Write a settings page or surface exactly as its navigation title is shown, capitalised as a title and in sentence case ("Change in Connections", "Open Settings -> Source control"). Palette commands lower-case the noun after the verb because it is part of the command phrase ("Open usage", "Open settings"). Never Title Case inside a multi-word title: "Source control", not "Source Control".
+
+DNA-V7a (add under DNA-V7): "Environment" is the default word; "computer" is first-run only. "Environment" means one running server (`docs/internals/glossary.md`) and is used in every dialog, menu and setting, including add-project and the composer "Run on" menu. "Computer" is allowed only on first-run and hosted pages (welcome wizard, app.t3.codes home). "Machine", "backend" and "host" (when they mean an environment) are retired from user-facing strings. A WSL distro running a server is a "WSL environment". The Source control section's detection result is "Detected tools", not "Server environment".
+```

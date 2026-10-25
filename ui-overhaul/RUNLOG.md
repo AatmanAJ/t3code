@@ -10,7 +10,7 @@ Run started: 2026-10-25 (local). Phase: 1 (audit + spec). Orchestrator: Claude F
 - Fork: the GitHub account `AJ-Base44` was renamed to `AatmanAJ`; GitHub redirects the old name.
   The fork lives at https://github.com/AatmanAJ/t3code (public, `isFork: true`, parent pingdotgg/t3code).
   Fork `main` was ~3002 commits behind upstream at checkout; it will be fast-forwarded on push.
-- Local clone: `/Users/lives/.t3/scratch/2026-10-25-t3-code-ui-ux-overhaul-d1d61898/t3code`
+- Local clone: `<repo>`
   with `origin` = fork, `upstream` = pingdotgg.
 - Host: macOS (Darwin 27.0.0), Node 24.22.1 on PATH; `vp` v1.0.0 / vite-plus 1.4.0 provides pinned Node 26.12.1.
   pnpm 12.14.0 via vp. `vp i` completed in 53s, exit 0.
@@ -152,3 +152,72 @@ Run started: 2026-10-25 (local). Phase: 1 (audit + spec). Orchestrator: Claude F
   running. The purpose of waiting (skim summaries, control load) is met; idling on one agent would waste an hour.
   Wave-1 lessons injected: mask personal data in captures, use your own probe threads (never message seed
   threads), clean up state, tag findings against #24865.
+- 15:15 Interim checkpoint: branch `ui-overhaul/audit` created from main (5f64c5eb); commit d711b4a3 (993 files,
+  229 MB incl. screens). The repo's pre-commit `vp fmt` ran on the markdown. Not pushed yet; final push at the
+  Phase 1 hard stop. Wave 2 (06 08 10 11 13 14 15 16) launched 15:08.
+- 15:30 Area 05 diff-and-review done: 38 findings (P1 6 / P2 20 / P3 12), ~80 screenshots; #24865: 36 not, 2 partial.
+  Worst: one click on the details-card "Commit" row commits everything with an AI message, no preview/undo
+  (agent reverted with git reset, repo byte-identical); later-loading diff files ignore the fold default; binary
+  files render as +0 -0 with an empty body. Wave 1 complete: 8/8.
+- 15:35 Privacy check: the Pull Requests page captures (baseline + area 05) show pingdotgg/t3code's public PRs via
+  the checkout's upstream remote, not private repositories. No masking needed. Baseline PR page captured the
+  skeleton state (cold load takes 5-8 s; see F-05 / area 13).
+- 15:45 Area 14 desktop-specific done: 33 findings (P1 3 / P2 15 / P3 15), 19 screenshots; all #24865 "not addressed".
+  Worst: Win/Linux closing the last window quits app+backend without confirmation (#10161); a backend restart
+  re-opens a deliberately closed window and steals focus on macOS (#24101, reproduced); no splash/window/error
+  while the backend starts except on WSL. Capture: relaunched Electron with
+  T3CODE_DESKTOP_REMOTE_DEBUGGING_PORT=9222 and drove it via Playwright connectOverCDP (OS screencapture is
+  blocked on this host, so traffic lights are synthetic overlays). Dev Electron now owned by dev-runner PID 75061
+  (main 75491); /tmp/t3code-desktop.pid updated.
+- 15:55 Area 10 first-run-and-empty-states done: 37 findings (P1 8 / P2 17 / P3 12), 66 screenshots; 26 of 41 empty
+  states do not use the Empty primitive. Worst: `npx t3`/`t3` first launches never show the wizard (server never
+  sends bootstrap events: server dependency); `/` lands on the bootstrap thread not a draft (6/6); no way back
+  to setup/import (#10961); `/new` without a prompt is a dead end. Agent reports the shared session was
+  invalidated for ~10 min by another area; verifying.
+- 15:58 Shared Playwright session verified working (Settings → Connections renders; 4 authorized clients).
+
+### Hard stop HS-001: Sonnet session rate limit (wave 2)
+
+- When: 2026-10-25 ~16:xx London. Six wave-2 agents (06, 08, 11, 13, 15, 16) terminated with HTTP 429 "session limit, resets 17:10 Europe/London" on claude-sonnet-5-5.
+- Default taken: waited for reset, resumed the same agents at 17:39 via SendMessage (saved context, cheaper than fresh dispatch). Areas 10 and 14 were unaffected.
+- Budget note: user asked for a cheaper run. From here on: agents reuse baseline captures, cap ~20 findings, 150-word returns; wave 3 briefs are lean; spec drafting delegated to Sonnet with orchestrator review.
+
+### Wave 2 complete (17:39–17:50 London, after HS-001 resume)
+
+- 06 terminal-and-panels: 22 (P1 9 / P2 12 / P3 1). 08 settings-project-and-keybindings: 47 (P1 3 / P2 31 / P3 13). 11 remote-access-and-pairing: 20 (P1 9 / P2 11). 13 loading-and-skeletons: 20 (P1 8 / P2 11 / P3 1), cold-load medians measured on prod build. 15 mobile: 19 (P1 6 / P2 11 / P3 2), iOS via XCUITest harness in /tmp, Android code-read only. 16 accessibility: 21 (P1 6 / P2 14 / P3 1), axe 3 critical / 5 serious.
+- Environment notes: area 11's F-11-07 test revoked the shared Playwright session; replaced at ~14:27Z with label `shared-playwright-do-not-revoke` (never revoke). Area 16 toggled and restored a fixture pin. Simulator, Metro and probe sessions cleaned up by area 15.
+- Wave 3 launched 17:41 London: 17, 18, 19, 20, 21, 23, 24 (lean briefs). 22 deferred to low-load slot.
+
+### Wave 3 complete (17:41–18:12 London)
+
+- 17 typography: 14 (P1 2). 18 shape-spacing-elevation: 9 (P1 1). 19 motion: 13 (P2 4 / P3 9). 20 copy-and-voice: 19 (P1 1) + 40-row copy table. 21 keyboard-shortcuts-ux: 20 (P1 2). 23 customisation-gap: 11 (11 of 27 candidates exist, 5 new fit DNA, 11 rejected). 24 onboarding-gap: 16 (P1 5) + 8 wireframes in spec/onboarding/.
+- 18:13 launched 22 performance-feel alone (low load) and a code-only follow-up sweep (_FOLLOWUPS.md) covering every Incomplete / Needs-deeper-look item.
+- spec/_FINDINGS-INDEX.md generated by script: 632 findings, P1 116 / P2 316 / P3 200, all fields present.
+- D-008: user asked for a cheaper run mid-Phase-1. Spec drafting is delegated to Sonnet writers (parts A: §1–6, B: §7–12, C: §13–16) working from the index and extracted sections; orchestrator (Fable) reviews and stitches instead of writing every section. Kickoff rule "orchestrator synthesises" is kept at the review level.
+
+### Follow-up sweep complete (18:45 London)
+
+- audit/_FOLLOWUPS.md: 326 Incomplete / Needs-deeper-look items. 150 resolved from code (32 keep a short residual live check), 88 documented as Phase 2 live probes with steps and expected results, 88 duplicates pointed to their owning finding. Every area now has either a resolution or a re-dispatched follow-up entry.
+- Severity changes recommended: F-03-15 (Claude text never streams; fix is server-only in ClaudeAdapterV2.ts, outside our change scope → upstream issue draft only) P2→P1.
+- Corrections appended (additive sections, originals left in place): DNA.md §7.1 motion bullets + DNA-S1 radius ladder; DOCS-DIGEST.md customisation table (9 wrong rows, 2 additions, 3 one-liners); MAP.md pointer fixes.
+- Part C (§13–16) drafting started 18:30; area 22 still measuring.
+
+### Spec drafting (18:20–19:15 London)
+
+- parts/A-sections-01-06.md 824 lines; parts/B-sections-07-12.md 774 lines; parts/C-sections-13-16.md 2,588 lines: 235 chunks (Tokens 13, Hierarchy 8, Polish-by-area 80, States 33, Edge cases 15, Customisation 11, Onboarding 17, Mobile 17, A11y 22, Motion 9, Copy 10), ~30,190 estimated lines, max chunk ~420 lines, 189 upstream candidates (92 now, 97 after #24865). Script-checked: every P1/P2 in exactly one chunk; 161 P3 deferred.
+- Baseline drift check 19:05: upstream main is now 1eb4071a49, 12 commits past the recorded baseline 5f64c5eb (mobile fixes #24261 #24951 #23968 #24272 #24807, server #24275 #23969, web #22807, shared #22891, desktop #22970 #19221). #23968 "share toast motion and bring bottom undo to iOS" and #24951 touch area 15/19 surfaces; Phase 2 must re-verify F-15-* and F-19-* against it. PR #24865 still OPEN (updated 13:17Z, +502/−272, 55 files), so recommendation "cut Phase 2 branch after it merges" stands.
+
+### Close-out prep (19:25–19:35 London)
+
+- Fork `main` fast-forwarded (no force) from 8bc40b4e to upstream/main 1eb4071a49. Fork branch `ui-overhaul/audit` not yet on origin; pushed at Phase 1 close.
+- ui-overhaul/ is 332 MB on disk; largest file 1.5 MB (prior-art/rejection-patterns.md); no file over 40 MB.
+- Reconciliation notes R1–R5 written (spec/parts/98-reconciliation.md); part B provisional ids renamed (69 refs); 235 chunk cards validated by script (fields, ≤420 lines, no Opus high/Fable).
+- Area 22 asked to wrap up at 19:23 with the measurements it has.
+
+### Phase 1 close (19:50 London)
+
+- Final audit totals: 24 areas, 640 findings — P0 0 / P1 117 / P2 320 / P3 203 (spec/_FINDINGS-INDEX.md). Area 22 landed last: 8 findings, chunked as P-22-1..5.
+- Spec assembled by spec/parts/stitch.sh into spec/T3-CODE-UI-UX-SPEC.md (16 sections + reconciliation notes R1–R5 + self-check). PR plan: 240 chunks, ~30,605 estimated lines, max ~420 per chunk, Opus low/medium or Haiku only. Decisions: 31, each with a recommendation.
+- Local absolute paths scrubbed from every text file under ui-overhaul/ (`<repo>` / `<home>`).
+- Left running on purpose for Phase 2: web dev runner PID 95734 (home /tmp/t3code-overhaul, ports 13773/5733) and desktop dev runner PID 75061 (home /tmp/t3code-overhaul-desktop, CDP 9222). Playwright tooling in /tmp/t3code-pw (shared session label `shared-playwright-do-not-revoke`). Never touched ~/.t3/userdata.
+- Hard stops: HS-001 only. Nothing was opened on pingdotgg/t3code (no PR, issue, discussion or comment). Phase 2 not started.

@@ -6,7 +6,7 @@ protocol verbatim; this file adds the facts about the running system.
 ## Environment facts
 
 - Repo checkout (read-only for audit agents, except your single output file and your screenshot folder):
-  `/Users/lives/.t3/scratch/2026-10-25-t3-code-ui-ux-overhaul-d1d61898/t3code` (pingdotgg/t3code main @ 5f64c5eb).
+  `<repo>` (pingdotgg/t3code main @ 5f64c5eb).
 - Constitution: `ui-overhaul/DNA.md`. Codebase map: `ui-overhaul/MAP.md`. Docs digest (what already exists):
   `ui-overhaul/DOCS-DIGEST.md`. Prior art: `ui-overhaul/prior-art/*.md` (cite issue/PR/discussion numbers).
 - Repo rules that bind you (from AGENTS.md): never `pkill -f` / `pgrep | kill`; never touch `~/.t3/userdata`;

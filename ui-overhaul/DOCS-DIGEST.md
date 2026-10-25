@@ -873,3 +873,46 @@ Exact casing as the docs write it. Use these in copy so new text matches the doc
 - The task brief said "about 37" doc files. The directory holds 39 files, and all 39 were digested.
 - The `[cli]` tag is used in this digest for server, command-line and environment-variable behaviour. It is outside the four tags the brief named (web, desktop, mobile, all).
 - Telemetry: no in-app opt-out toggle is documented; the only documented opt-out is the server environment variable.
+
+## Corrections from the post-audit follow-up sweep (2026-10-25)
+
+Area 23 verified against the settings schema and Settings pages; rows below supersede the earlier "Customisation that already exists" table where they conflict.
+
+### DOCS-DIGEST.md: "Customisation that already exists" (9 wrong rows, plus 2 additions)
+
+Cause: the section defines "Exists?" as "documented in docs/user" while its consumers (area 23, the spec) read it as "ships in the product". Replace the paragraph under the heading with:
+
+```text
+Read the Exists? column as: yes = a user-facing control ships on the named surface; partial = it ships only on some surfaces, only as part of another control, or only via the environment or command line; no = no such control exists in the product. The In docs? column says separately whether docs/user describes it (grep confirmed: docs/user says nothing about sidebar or panel resizing, font settings, web or desktop notification settings, diff layout, word wrap, whitespace or Time format).
+```
+
+Add an "In docs?" column to the table and replace these nine rows (the other rows stay; reduced-motion override, density, accent colour and per-project colour were already correct):
+
+| Candidate                                  | Exists? | Where (settings path and key)                                                                                                                                                                                                                  | In docs?                      | Notes                                                                                                          |
+| ------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| UI font                                    | yes     | Settings → Appearance → Typography → Interface font (`fontFamilySans`) and size (`fontSizeInterface`, 12-20 px, default 16); Advanced adds Prompt font and size (`fontFamilyComposer`, `fontSizePrompt`) (`contracts/src/settings.ts:389-404`) | no (F-07-39)                  | Web and desktop. Mobile has its own: Settings → Appearance text preferences (`baseFontSize`, DM Sans bundled). |
+| code font                                  | yes     | Typography → Monospace font (`fontFamilyCode`) and size (`fontSizeCode`, 10-18, default 13); Advanced → Terminal font and size (`fontFamilyTerminal`, `fontSizeTerminal`, 8-20, default 12)                                                    | no                            | Mobile: Appearance code and terminal preferences (`codeFontSize`, `terminalFontSize`, `codeWordBreak`).        |
+| font sizes                                 | yes     | As the two rows above; Interface size scales every rem-based control                                                                                                                                                                           | mobile only (sizes not named) | Raising the interface size is the only density lever.                                                          |
+| sidebar width persistence                  | yes     | Drag the sidebar edge; width persists per device (`chat_thread_sidebar_width`, `threadSidebarWidth.ts`); double-click the rail resets (`AppSidebarLayout.tsx:416`)                                                                             | no                            | The collapsed or expanded state is not restored (F-01-01).                                                     |
+| panel width persistence                    | partial | Right panel width persists per thread (`t3code:preview-panel-width:<threadKey>`, starts at 540 px); terminal drawer height per thread (`t3code:terminal-state:v1`, starts at 280 px)                                                           | no                            | No global default and no reset gesture (F-23-03).                                                              |
+| diff view default (inline or side-by-side) | yes     | Settings → General → Behavior → Diff layout (`diffLayout`: stacked or split) and Default diff file state (`diffFilesCollapsed`)                                                                                                                | no                            | Web and desktop.                                                                                               |
+| diff word wrap                             | yes     | Settings → Appearance → Typography → Word wrap (`wordWrap`, default on); shared by code blocks, tables, diffs and previews                                                                                                                     | no                            | No diff-only switch (rejected, F-23).                                                                          |
+| diff whitespace                            | yes     | Settings → General → Behavior → Hide whitespace changes (`diffIgnoreWhitespace`, default on)                                                                                                                                                   | no                            | Web and desktop.                                                                                               |
+| notification preferences                   | yes     | Web and desktop: Settings → General → Behavior → Thread notifications (`notificationMode`: off, notifications, sound, both) and In-app notifications (`inAppNotificationsEnabled`). Mobile: Settings → Notifications                           | mobile only (F-12-36)         | OS permission and Android channels are in system Settings.                                                     |
+
+Add (new rows) and amend one:
+
+| Candidate                              | Exists? | Where                                                                                                                                                                            | In docs?           | Notes                                                                                                                                                              |
+| -------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| timestamp format                       | yes     | Settings → General → Behavior → Time format (`timestampFormat`: locale, 12-hour, 24-hour)                                                                                        | no                 | Not honoured by the usage-limit banner, slow-RPC toast, PR summary comments, Connections access times, and the date half of snooze labels (F-23, area 23 Needs 4). |
+| confirmations (amend the existing row) | yes     | Settings → General → Confirmations: Unpin, Archive, Delete (`confirmThreadUnpin` false, `confirmThreadArchive` false, `confirmThreadDelete` true) and, on desktop, Quit shortcut | Quit shortcut only | Unpin does not ask by default (thread-sidebar.md).                                                                                                                 |
+
+Update the closing "Yes or partial rows" paragraph: yes adds UI font, code font, font sizes, sidebar width persistence, diff view default, diff word wrap, diff whitespace, notification preferences, timestamp format, confirmations; partial becomes accent colour, density (Android only), panel width persistence, per-project colour or tag, telemetry opt-out.
+
+### DOCS-DIGEST.md: three single-line corrections
+
+```text
+DOCS-DIGEST.md:82 and :845 ("Enter sends" / "Enter sends on all clients"): append ", except with a touch software keyboard open, where Return inserts a newline and you tap Send; on mobile the Return key setting applies only with a hardware keyboard (composer-logic.ts:71-72, SettingsKeyboardRouteScreen.tsx:75-77)".
+DOCS-DIGEST.md:597: change "Cached lists, reviews, guides and diffs stay readable offline" to "...stay readable offline on mobile (web and desktop keep no offline pull request cache; docs/user/source-control.md:169)".
+DOCS-DIGEST.md:226: no change (Send shortcut row is correct for web and desktop).
+```

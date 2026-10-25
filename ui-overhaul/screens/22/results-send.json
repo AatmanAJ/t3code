@@ -1,0 +1,85 @@
+{
+  "_meta": {
+    "base": "http://localhost:5822",
+    "label": "prod-send",
+    "runs": 3,
+    "cpu": 1,
+    "ua": "playwright chromium headless",
+    "date": "2026-10-25T19:26:58.094Z"
+  },
+  "send": [
+    {
+      "first": {
+        "kind": "first send from draft",
+        "composerCleared": 52.4,
+        "userBubble": 52.5,
+        "workingRow": 52.6,
+        "firstAssistantText": 4256.2,
+        "leftDraftRoute": 153.6,
+        "settled": 4340.3,
+        "firstWsFrameMs": 70.1,
+        "lastWsFrameBeforeFirstTextMs": 4249.4,
+        "wsToPaintLagMs": 6.8,
+        "wsFrames": 28,
+        "wsKB": 434.6,
+        "longTasks": {
+          "count": 1,
+          "totalMs": 53,
+          "maxMs": 53
+        },
+        "longTaskList": [[1.4, 53]],
+        "framesOver34": 0,
+        "maxFrameGap": 33.3,
+        "cls": [
+          [0.0027, ["DIV.@246>274"]],
+          [0.0152, ["DIV.@274>166"]],
+          [0.0168, ["DIV.@166>282", "DIV.@246>209"]],
+          [0, ["SPAN.group/sidebar-status-slot relative ml-auto flex h-@108>108"]],
+          [0, ["SPAN.group/sidebar-status-slot relative ml-auto flex h-@108>108"]]
+        ],
+        "recalcs": 316,
+        "layouts": 42,
+        "taskMs": 545.5,
+        "scriptMs": 283.3,
+        "styleMs": 60.1,
+        "layoutMs": 8.8,
+        "turnWallMs": 4340.3
+      },
+      "follow": {
+        "kind": "follow-up in thread",
+        "composerCleared": 17.9,
+        "userBubble": 18.1,
+        "workingRow": 18.2,
+        "firstAssistantText": -38.9,
+        "leftDraftRoute": -38.8,
+        "settled": 1635.9,
+        "firstWsFrameMs": 28.5,
+        "lastWsFrameBeforeFirstTextMs": null,
+        "wsToPaintLagMs": null,
+        "wsFrames": 18,
+        "wsKB": 48.9,
+        "longTasks": {
+          "count": 0,
+          "totalMs": 0,
+          "maxMs": 0
+        },
+        "longTaskList": [],
+        "framesOver34": 0,
+        "maxFrameGap": 16.8,
+        "cls": [
+          [0.0054, ["DIV.@451>446", "DIV.@416>373"]],
+          [0, ["SPAN.group/sidebar-status-slot relative ml-auto flex h-@108>108"]],
+          [0, ["SPAN.group/sidebar-status-slot relative ml-auto flex h-@108>108"]]
+        ],
+        "recalcs": 121,
+        "layouts": 15,
+        "taskMs": 216.9,
+        "scriptMs": 117.3,
+        "styleMs": 22.4,
+        "layoutMs": 3.8,
+        "turnWallMs": 1635.9
+      },
+      "threadUrlTail": "7f0c224b-4b6"
+    }
+  ]
+}
