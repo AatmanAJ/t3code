@@ -3,6 +3,7 @@ import { PlayIcon, WrapTextIcon } from "lucide-react";
 import { toHtml } from "hast-util-to-html";
 import React, { use, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { getClientSettings } from "../../hooks/useSettings";
 import type { DiffThemeName } from "../../lib/diffRendering";
 import {
@@ -17,6 +18,7 @@ import {
   syntheticFileNameForLanguageId,
 } from "../../pierre-icons";
 import { MorphIcon } from "../MorphIcon";
+import { showAnchoredCopyErrorToast } from "../ui/anchoredCopyToast";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { HighlightedCodeLines } from "./HighlightedCodeLines";
@@ -150,9 +152,19 @@ export function MarkdownCodeBlock({
   diagram?: boolean;
   children: ReactNode;
 }) {
-  const [copied, setCopied] = useState(false);
+  const copyButtonRef = useRef<HTMLButtonElement>(null);
+  const { copyToClipboard, isCopied: copied } = useCopyToClipboard({
+    target: "code block",
+    timeout: 1200,
+    onError: (error) => {
+      reportMarkdownActionFailure(
+        { operation: "copy-code-block", language, ...(fenceTitle ? { fenceTitle } : {}) },
+        error,
+      );
+      showAnchoredCopyErrorToast(copyButtonRef, error);
+    },
+  });
   const [wrapped, setWrapped] = useState(() => getClientSettings().wordWrap);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapLabel = wrapped ? "Disable line wrap" : "Wrap lines";
   const copyLabel = copied ? "Copied" : "Copy code";
   const command = code.trim();
@@ -167,49 +179,14 @@ export function MarkdownCodeBlock({
     // make the rendered command differ from what the terminal would receive.
     !/[\p{Cc}\p{Cf}]/u.test(code.slice(0, -1));
 
-  const handleCopy = () => {
-    if (typeof navigator === "undefined" || navigator.clipboard == null) {
-      return;
-    }
-    void navigator.clipboard
-      .writeText(code)
-      .then(() => {
-        if (copiedTimerRef.current != null) {
-          clearTimeout(copiedTimerRef.current);
-        }
-        setCopied(true);
-        copiedTimerRef.current = setTimeout(() => {
-          setCopied(false);
-          copiedTimerRef.current = null;
-        }, 1200);
-      })
-      .catch((cause) => {
-        reportMarkdownActionFailure(
-          {
-            operation: "copy-code-block",
-            language,
-            ...(fenceTitle ? { fenceTitle } : {}),
-          },
-          cause,
-        );
-      });
-  };
-
-  useEffect(
-    () => () => {
-      if (copiedTimerRef.current != null) {
-        clearTimeout(copiedTimerRef.current);
-        copiedTimerRef.current = null;
-      }
-    },
-    [],
-  );
+  const handleCopy = () => copyToClipboard(code);
 
   const copyButton = (
     <Tooltip>
       <TooltipTrigger
         render={
           <Button
+            ref={copyButtonRef}
             type="button"
             variant="ghost-muted"
             size="icon-xs"
