@@ -17,7 +17,11 @@ import {
   threadUndoClaimsShortcut,
   undoLatestThreadAction,
 } from "../hooks/showThreadUndoNotice";
-import { getLocalStorageItem, removeLocalStorageItem } from "../hooks/useLocalStorage";
+import {
+  getLocalStorageItem,
+  removeLocalStorageItem,
+  useLocalStorage,
+} from "../hooks/useLocalStorage";
 import {
   isRichTextBoldShortcut,
   resolveShortcutCommand,
@@ -51,6 +55,7 @@ import {
   resolveThreadSidebarMaximumWidth,
   resolveThreadSidebarMinimumWidth,
   THREAD_MAIN_CONTENT_MIN_WIDTH,
+  THREAD_SIDEBAR_OPEN_STORAGE_KEY,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./threadSidebarWidth";
 import {
@@ -110,6 +115,11 @@ function readWindowFullscreen(): boolean {
       typeof getWindowFullscreenState === "function" ? getWindowFullscreenState() : false;
   }
   return windowFullscreenSnapshot;
+}
+
+// The desktop sidebar keeps its collapsed state across reloads; first launch starts expanded.
+export function usePersistedSidebarOpen() {
+  return useLocalStorage(THREAD_SIDEBAR_OPEN_STORAGE_KEY, true, Schema.Boolean);
 }
 
 function readInitialThreadSidebarWidth(): number {
@@ -333,6 +343,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const routePanelAnimationsActive = panelAnimationsActive && !panelAnimationsSuppressed;
   const appModalOpen = isAppModalPage(pathname);
   const isMacosDesktop = isElectron && isMacPlatform(navigator.platform);
+  const [sidebarOpen, setSidebarOpen] = usePersistedSidebarOpen();
   const [sidebarWidth, setSidebarWidth] = useState(readInitialThreadSidebarWidth);
   // A clamped drag may not change width, so viewport changes need a separate subscription.
   const viewportWidth = useSyncExternalStore(subscribeToViewportWidth, readViewportWidth);
@@ -387,7 +398,8 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
       <SidebarProvider
         className="h-dvh! min-h-0!"
         data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
-        defaultOpen
+        onOpenChange={setSidebarOpen}
+        open={sidebarOpen}
         style={sidebarProviderStyle}
       >
         <SidebarBrandWidthProbe onWidthChange={setBrandWidth} />
